@@ -14,7 +14,11 @@ Stuck? Try for real first, THEN peek at:
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "sim"))
 # Everything from the simulator you might need:
-from ftcsim import Robot, Field, Gamepad, IMU, Motor, StepperServo, PIDFController, run_for
+from ftcsim import (Robot, Field, Gamepad, IMU, Motor, StepperServo,
+                    PIDFController, run_for, Pose2d, AprilTag, Odometry, Camera,
+                    Command, InstantCommand, SequentialCommand, ParallelCommand,
+                    SleepCommand, CommandScheduler, DriveToPoseAction,
+                    SequentialAction, run_action)
 
 print("Chapter 09 - delete this line and start coding your exercises!\n")
 

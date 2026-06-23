@@ -32,6 +32,10 @@ The simulator deliberately uses the **same method names as Juice's real Java cod
 (`set_speed`/`setSpeed`, `getEncoderValue`, `setDrivePower`, `PIDFController`, `IMU`,
 `telemetry.addData`). So when you switch to Java, it will feel like you already wrote it.
 
+> 🔁 **Chapter 11** is a whole chapter on doing that switch, and
+> **[`PYTHON-TO-JAVA.md`](PYTHON-TO-JAVA.md)** is a one-page cheat sheet you can keep open
+> while you convert any exercise to real FTC Java.
+
 ## What you'll be able to do by season start
 
 The same core skills your team builds every mission on — the FTC versions of the
@@ -46,13 +50,25 @@ FLL things you already did (gyro-straight, line following, using sensors):
 - Write an **autonomous** routine that sequences actions to score points.
 - Take any new mission and break it into a plan you can code.
 
+And the modern skills today's top teams (and Juice) actually run:
+
+- **Convert your Python to real FTC Java** confidently, line by line.
+- Drive **field-centric** so "forward" always means "away from the driver."
+- Track a live **odometry pose** and drive to an **exact field position**.
+- Use a camera + **AprilTags** to localize, and find game pieces by color.
+- Organize a robot with **command-based programming** (Juice's `commands/`).
+- Write **pose-based autonomous** the RoadRunner 1.0 / Pedro Pathing way.
+
 ## How to use this course (daily plan)
 
 > **Students: read [`STUDENT-START-HERE.md`](STUDENT-START-HERE.md) first** — it walks you
 > through installing Python and running your first exercise, step by step.
 
-- **10 chapters, 10 exercises each = 100 exercises.** Do ~1 exercise per weekday.
+- **16 chapters, 10 exercises each = 160 exercises.** Do ~1 exercise per weekday.
   That's about 14 weeks of weekdays — a full summer, finishing before kickoff.
+  Chapters 1–10 are the core; **11–16 are the modern upgrades** (Java conversion,
+  field-centric driving, odometry, vision/AprilTags, command-based code, pose-based
+  autonomous) that today's top teams — including Juice — actually run.
 - Each chapter has: a **lesson** (`chapters/NN-name.md`), a **starter file you edit**
   (`chapters/NN_starter.py`), and an **answer key** (`solutions/NN_solution.py`).
   The starter files are generated from the lessons by `tools/make_starters.py`.
@@ -91,15 +107,26 @@ python chapters/02_starter.py
 | 8  | [Subsystems & State Machines](chapters/08-subsystems-and-state-machines.md) | Classes, encapsulation, the `Levels` enum, presets | Juice subsystem architecture |
 | 9  | [Autonomous](chapters/09-autonomous.md) | Sequencing actions, dead reckoning, poses & paths | `BucketSide.java`, RoadRunner |
 | 10 | [Capstone: Solve a Mission](chapters/10-capstone-mission.md) | Put it all together; a mission-solving method | A real season game |
+| 11 | [Crossing to Java](chapters/11-crossing-to-java.md) | Convert your Python to real FTC Java, line by line | Every file Juice runs |
+| 12 | [Field-Centric Driving](chapters/12-field-centric-driving.md) | Drive relative to the field using the IMU heading | Modern TeleOp upgrade |
+| 13 | [Odometry & Pose](chapters/13-odometry-and-pose.md) | Always know your `(x, y, heading)`; Pinpoint/OTOS | `KalmanDrive.java` |
+| 14 | [Vision & AprilTags](chapters/14-vision-and-apriltags.md) | Localize off field tags; find samples by color | `CVMaster.java`, Limelight |
+| 15 | [Command-Based Programming](chapters/15-command-based-programming.md) | Compose behavior as Commands + a scheduler | Juice `commands/` folder |
+| 16 | [Modern Autonomous: Paths](chapters/16-modern-autonomous-paths.md) | Drive to poses; RoadRunner 1.0 Actions / Pedro | `BucketSide.java` |
 
 ## A note to mentors / parents
 
 Exercises are graded in difficulty inside each chapter (1–2 warm-up, 3–7 core,
 8–10 stretch). A student who finishes through **Chapter 8** is genuinely TeleOp-ready;
-**Chapters 9–10** (autonomous, poses, RoadRunner) are the stretch goal. The PID and
-odometry math in Chapters 7 and 9 is the only place real algebra/trig shows up — pair
-younger students up there. Everything runs offline in the simulator, so no Control Hub
-or robot is needed until the team reconvenes.
+**Chapters 9–10** (autonomous, poses, RoadRunner) complete the core. **Chapters 11–16**
+are the modern-FTC upgrades — Python→Java conversion, field-centric driving, odometry,
+vision/AprilTags, command-based programming, and pose-based autonomous — the things the
+FLL-to-FTC jump doesn't cover but that every competitive team now uses. They're grounded
+in Juice's real advanced files (`KalmanDrive.java`, `CVMaster.java`, the `commands/`
+folder, `BucketSide.java`). The trig shows up in Chapters 7, 9, 12, and 13 — pair younger
+students there. Everything runs offline in the simulator, so no Control Hub or robot is
+needed until the team reconvenes. A student who only reaches Chapter 11 is already
+season-ready; 12–16 make them *competitive*.
 
 ## Credits & source material
 

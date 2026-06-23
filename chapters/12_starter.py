@@ -1,15 +1,15 @@
 """
-Chapter 8 — Subsystems & State Machines
+Chapter 12 — Field-Centric Driving
 
 This is YOUR workspace. Read the matching lesson first:
-    chapters/08-subsystems-and-state-machines.md
+    chapters/12-field-centric-driving.md
 
 Then solve each exercise below where it says  # ---- YOUR CODE HERE ----.
 Run this file any time to see your output:
-    python chapters/08_starter.py
+    python chapters/12_starter.py
 
 Stuck? Try for real first, THEN peek at:
-    solutions/08_solution.py
+    solutions/12_solution.py
 """
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "sim"))
@@ -20,14 +20,14 @@ from ftcsim import (Robot, Field, Gamepad, IMU, Motor, StepperServo,
                     SleepCommand, CommandScheduler, DriveToPoseAction,
                     SequentialAction, run_action)
 
-print("Chapter 08 - delete this line and start coding your exercises!\n")
+print("Chapter 12 - delete this line and start coding your exercises!\n")
 
 
 # ===========================================================================
 # Exercise 1
-# A Claw class. Write a Claw class with is_open state and methods open(),
-# close(), and status() (returns "OPEN"/"CLOSED"). This mirrors Claw.java's
-# start/stop intake. Use it; print status before and after closing.
+# Same when facing forward. With the robot at heading 0, drive (x=0, y=1)
+# field-centric for 1s, then reset and drive the same robot-centric. Show
+# the final pose is (about) the same — at heading 0 the two are identical.
 # ===========================================================================
 def exercise_1():
     # ---- YOUR CODE HERE ----
@@ -36,9 +36,9 @@ def exercise_1():
 
 # ===========================================================================
 # Exercise 2
-# Encapsulate a Lift. Write a Lift class wrapping a MyPIDF (from Ch.7) and a
-# ticks value. Methods: run_to_position(target), update() (one PID step),
-# get_pos(). Drive it to 1000 and loop update() until it settles.
+# The spin test. Turn the robot to heading 90 first (use run_for with rx).
+# Then drive (0, 1) *robot-centric* for 1s and print the pose. Notice it
+# strafed sideways in field terms — not what the driver wanted.
 # ===========================================================================
 def exercise_2():
     # ---- YOUR CODE HERE ----
@@ -47,9 +47,9 @@ def exercise_2():
 
 # ===========================================================================
 # Exercise 3
-# The Levels enum. Use Python's enum to recreate a trimmed Levels: INIT,
-# INTAKE, INTERMEDIATE, LOW_BASKET, HIGH_BASKET, LOW_RUNG, HIGH_RUNG. Print
-# all of them.
+# Field-centric fixes it. Same setup: turn to heading 90, then drive (0, 1)
+# *field-centric* for 1s. Show it moves in +y (downfield) like the driver
+# intended, even though the robot's nose points sideways.
 # ===========================================================================
 def exercise_3():
     # ---- YOUR CODE HERE ----
@@ -58,10 +58,10 @@ def exercise_3():
 
 # ===========================================================================
 # Exercise 4
-# Lift presets. Give Lift a run_to_preset(level) method that maps each
-# Levels value to a target tick count (use Juice's real numbers:
-# HIGH_BASKET=2160, HIGH_RUNG=960, INTAKE=-15, others 0). Send it to
-# HIGH_BASKET and settle.
+# Write the rotation yourself. Don't call the built-in. Write
+# rotate_stick(x, y, heading_deg) that returns (x_robot, y_robot) using the
+# formula above. Test it: at heading 90, (0, 1) should come out close to (1,
+# 0) or (-1, 0) (figure out the sign and explain it).
 # ===========================================================================
 def exercise_4():
     # ---- YOUR CODE HERE ----
@@ -70,10 +70,10 @@ def exercise_4():
 
 # ===========================================================================
 # Exercise 5
-# A Robot with a state. Write a small Robot wrapper class holding a lift and
-# a state field (a Levels). Methods high_basket() and high_rung() that set
-# BOTH the lift preset AND self.state. Verify state updates when you call
-# them.
+# Drive a square, field-centric. Without ever turning the robot, drive a
+# square: +y 1s, +x 1s, −y 1s, −x 1s, all field-centric. The robot's heading
+# should stay ~0 the whole time while it traces a box. (Mecanum +
+# field-centric = strafing a square.)
 # ===========================================================================
 def exercise_5():
     # ---- YOUR CODE HERE ----
@@ -82,10 +82,11 @@ def exercise_5():
 
 # ===========================================================================
 # Exercise 6
-# smartOuttake. Add smart_outtake() that returns "DROP SAMPLE" if state is a
-# basket, "RELEASE SPECIMEN" if state is a rung, else "NOTHING". Test it
-# after calling high_basket() and after high_rung(). (This is the real
-# smartOuttake logic.)
+# Heading reset button. Simulate the driver pressing a "reset heading"
+# button: turn the robot to 90, then call robot.imu.reset_heading(), then
+# drive (0,1) field-centric. After reset, "forward" should follow the
+# robot's *current* nose. Explain in a comment when a driver would press
+# this.
 # ===========================================================================
 def exercise_6():
     # ---- YOUR CODE HERE ----
@@ -94,10 +95,9 @@ def exercise_6():
 
 # ===========================================================================
 # Exercise 7
-# toggleGamepiece. Add a mode ("SAMPLE"/"SPECIMEN") and a toggle_gamepiece()
-# method that flips it (mirror Robot.toggleGamepiece). Also add
-# tele_deposit_preset() that calls high_basket() if mode is SAMPLE else
-# high_rung(). Test both modes.
+# Compare distance. For both modes, turn the robot 45° first, then drive
+# (0,1) for 1s. Print both final poses side by side and describe the
+# difference in plain English.
 # ===========================================================================
 def exercise_7():
     # ---- YOUR CODE HERE ----
@@ -106,11 +106,9 @@ def exercise_7():
 
 # ===========================================================================
 # Exercise 8
-# Legal transitions. Not every state can follow every other. Write a
-# can_transition(from_state, to_state) using a dictionary of allowed
-# next-states (e.g. from INTAKE you can go to INTERMEDIATE; from
-# INTERMEDIATE to any scoring level; you can't jump straight
-# INTAKE→HIGH_BASKET). Test a legal and an illegal transition.
+# Slow + field-centric. Combine Chapter 6's slow mode (×0.3 on a bumper)
+# with field-centric driving. Show one second of normal vs slow covers
+# different distance, both field-centric.
 # ===========================================================================
 def exercise_8():
     # ---- YOUR CODE HERE ----
@@ -119,10 +117,10 @@ def exercise_8():
 
 # ===========================================================================
 # Exercise 9
-# Full sequence. Drive the state machine through a realistic scoring cycle:
-# INIT → INTAKE → INTERMEDIATE → HIGH_BASKET → (smart_outtake) →
-# INTERMEDIATE. At each step print the state and, for scoring states, the
-# lift target. Reject any illegal transition using exercise 8.
+# A full field-centric TeleOp. Write a run_for loop with a scripted gamepad
+# that: reads sticks, drives field-centric, and resets heading when a button
+# is pressed once (edge-detected, Chapter 6). Print telemetry every 25
+# loops: heading + pose.
 # ===========================================================================
 def exercise_9():
     # ---- YOUR CODE HERE ----
@@ -131,12 +129,10 @@ def exercise_9():
 
 # ===========================================================================
 # Exercise 10
-# Design your own subsystem. Pick a mechanism from a real FTC game (an
-# intake, a shooter, a hanger). On paper/comment: list its states, its
-# hardware (motors/servos/ sensors), and the public methods you'd expose.
-# Then implement a minimal version as a Python class with at least 2 states
-# and a update()/status(). This is exactly the first thing you'll do on
-# Juice for a new season.
+# Why not always field-centric? In a comment, list two situations where a
+# driver might *prefer* robot-centric (hint: lining up to a wall/board, or
+# if the IMU drifts), and describe how a team lets the driver toggle between
+# the two modes with one button.
 # ===========================================================================
 def exercise_10():
     # ---- YOUR CODE HERE ----

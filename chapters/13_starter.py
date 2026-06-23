@@ -1,15 +1,15 @@
 """
-Chapter 8 — Subsystems & State Machines
+Chapter 13 — Odometry: Always Know Where You Are
 
 This is YOUR workspace. Read the matching lesson first:
-    chapters/08-subsystems-and-state-machines.md
+    chapters/13-odometry-and-pose.md
 
 Then solve each exercise below where it says  # ---- YOUR CODE HERE ----.
 Run this file any time to see your output:
-    python chapters/08_starter.py
+    python chapters/13_starter.py
 
 Stuck? Try for real first, THEN peek at:
-    solutions/08_solution.py
+    solutions/13_solution.py
 """
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "sim"))
@@ -20,14 +20,13 @@ from ftcsim import (Robot, Field, Gamepad, IMU, Motor, StepperServo,
                     SleepCommand, CommandScheduler, DriveToPoseAction,
                     SequentialAction, run_action)
 
-print("Chapter 08 - delete this line and start coding your exercises!\n")
+print("Chapter 13 - delete this line and start coding your exercises!\n")
 
 
 # ===========================================================================
 # Exercise 1
-# A Claw class. Write a Claw class with is_open state and methods open(),
-# close(), and status() (returns "OPEN"/"CLOSED"). This mirrors Claw.java's
-# start/stop intake. Use it; print status before and after closing.
+# Read your pose. Make a robot, drive forward 1s, then print
+# robot.odometry.get_pose(). Confirm x grew and y/heading stayed ~0.
 # ===========================================================================
 def exercise_1():
     # ---- YOUR CODE HERE ----
@@ -36,9 +35,8 @@ def exercise_1():
 
 # ===========================================================================
 # Exercise 2
-# Encapsulate a Lift. Write a Lift class wrapping a MyPIDF (from Ch.7) and a
-# ticks value. Methods: run_to_position(target), update() (one PID step),
-# get_pos(). Drive it to 1000 and loop update() until it settles.
+# Pose after a turn. Turn the robot to ~90° (drive with rx), then print the
+# pose's heading. Confirm odometry tracked the rotation.
 # ===========================================================================
 def exercise_2():
     # ---- YOUR CODE HERE ----
@@ -47,9 +45,9 @@ def exercise_2():
 
 # ===========================================================================
 # Exercise 3
-# The Levels enum. Use Python's enum to recreate a trimmed Levels: INIT,
-# INTAKE, INTERMEDIATE, LOW_BASKET, HIGH_BASKET, LOW_RUNG, HIGH_RUNG. Print
-# all of them.
+# Distance between poses. Drive somewhere, grab pose =
+# robot.odometry.get_pose(), then use pose.distance_to(Pose2d(0, 0)) to
+# print how far from the field center you are.
 # ===========================================================================
 def exercise_3():
     # ---- YOUR CODE HERE ----
@@ -58,10 +56,9 @@ def exercise_3():
 
 # ===========================================================================
 # Exercise 4
-# Lift presets. Give Lift a run_to_preset(level) method that maps each
-# Levels value to a target tick count (use Juice's real numbers:
-# HIGH_BASKET=2160, HIGH_RUNG=960, INTAKE=-15, others 0). Send it to
-# HIGH_BASKET and settle.
+# Live pose telemetry. In a run_for loop driving forward, print the odometry
+# pose every 25 loops. Watch x climb in real time — this is what a driver
+# sees.
 # ===========================================================================
 def exercise_4():
     # ---- YOUR CODE HERE ----
@@ -70,10 +67,8 @@ def exercise_4():
 
 # ===========================================================================
 # Exercise 5
-# A Robot with a state. Write a small Robot wrapper class holding a lift and
-# a state field (a Levels). Methods high_basket() and high_rung() that set
-# BOTH the lift preset AND self.state. Verify state updates when you call
-# them.
+# Track a multi-leg path. Drive forward 1s, strafe 1s, forward 1s. After
+# each leg, print the pose. You're logging a path like an autonomous would.
 # ===========================================================================
 def exercise_5():
     # ---- YOUR CODE HERE ----
@@ -82,10 +77,10 @@ def exercise_5():
 
 # ===========================================================================
 # Exercise 6
-# smartOuttake. Add smart_outtake() that returns "DROP SAMPLE" if state is a
-# basket, "RELEASE SPECIMEN" if state is a rung, else "NOTHING". Test it
-# after calling high_basket() and after high_rung(). (This is the real
-# smartOuttake logic.)
+# "Am I there yet?" Pick a target Pose2d(40, 0, 0). In a loop, drive forward
+# and stop as soon as robot.odometry.get_pose().distance_to(target) < 2.0.
+# Print the final pose and how long it took. (This is the seed of "drive to
+# pose" in Chapter 16.)
 # ===========================================================================
 def exercise_6():
     # ---- YOUR CODE HERE ----
@@ -94,10 +89,10 @@ def exercise_6():
 
 # ===========================================================================
 # Exercise 7
-# toggleGamepiece. Add a mode ("SAMPLE"/"SPECIMEN") and a toggle_gamepiece()
-# method that flips it (mirror Robot.toggleGamepiece). Also add
-# tele_deposit_preset() that calls high_basket() if mode is SAMPLE else
-# high_rung(). Test both modes.
+# Feel the drift. Set robot.odometry.noise = 0.5. Read the pose 5 times
+# *without* moving and print each. Notice it jitters even though the robot
+# is still — real sensors do this. In a comment, say why timing-based
+# autonomous (FLL style) can't catch this.
 # ===========================================================================
 def exercise_7():
     # ---- YOUR CODE HERE ----
@@ -106,11 +101,10 @@ def exercise_7():
 
 # ===========================================================================
 # Exercise 8
-# Legal transitions. Not every state can follow every other. Write a
-# can_transition(from_state, to_state) using a dictionary of allowed
-# next-states (e.g. from INTAKE you can go to INTERMEDIATE; from
-# INTERMEDIATE to any scoring level; you can't jump straight
-# INTAKE→HIGH_BASKET). Test a legal and an illegal transition.
+# Offsets matter. Juice sets xOffset/yOffset for where the pods sit relative
+# to robot center. In a comment, explain what would go wrong in the pose if
+# you told the software the pods were at the center when they're really 6"
+# forward (hint: rotation).
 # ===========================================================================
 def exercise_8():
     # ---- YOUR CODE HERE ----
@@ -119,10 +113,10 @@ def exercise_8():
 
 # ===========================================================================
 # Exercise 9
-# Full sequence. Drive the state machine through a realistic scoring cycle:
-# INIT → INTAKE → INTERMEDIATE → HIGH_BASKET → (smart_outtake) →
-# INTERMEDIATE. At each step print the state and, for scoring states, the
-# lift target. Reject any illegal transition using exercise 8.
+# Reset to a known pose. At the start of autonomous you *tell* odometry
+# where you are. Simulate this: move the robot to (20, -30), then in a
+# comment explain why you must "seed" the starting pose before autonomous
+# and what happens if you forget.
 # ===========================================================================
 def exercise_9():
     # ---- YOUR CODE HERE ----
@@ -131,12 +125,11 @@ def exercise_9():
 
 # ===========================================================================
 # Exercise 10
-# Design your own subsystem. Pick a mechanism from a real FTC game (an
-# intake, a shooter, a hanger). On paper/comment: list its states, its
-# hardware (motors/servos/ sensors), and the public methods you'd expose.
-# Then implement a minimal version as a Python class with at least 2 states
-# and a update()/status(). This is exactly the first thing you'll do on
-# Juice for a new season.
+# Pinpoint vs OTOS, in your words. Research note: in a comment, summarize
+# the trade-off between a Pinpoint (two encoder pods) and an OTOS (optical
+# mouse sensor) — cost, setup, and what each struggles with. (See
+# gobilda.com and sparkfun's OTOS page in REFERENCES.) No code; this is the
+# "choose your hardware" muscle.
 # ===========================================================================
 def exercise_10():
     # ---- YOUR CODE HERE ----

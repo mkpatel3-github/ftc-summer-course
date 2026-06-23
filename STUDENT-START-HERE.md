@@ -106,9 +106,12 @@ only you** — the season is the real test.
 
 ## The plan for the summer 📅
 
-- There are **10 chapters**, each with **10 exercises** = **100 little challenges**.
-- Do about **one exercise per weekday**. That's roughly 14 weeks — a whole summer — and
-  you'll finish right around when the new FTC season starts.
+- There are **16 chapters**, each with **10 exercises** = **160 little challenges**.
+  Chapters 1–10 are the core skills; 11–16 are the "modern robot" upgrades (turning your
+  Python into real Java, plus what the best teams do today).
+- Do about **one exercise per weekday**. That's a whole summer, and you'll finish right
+  around when the new FTC season starts. If you only get through Chapter 11, you're
+  already ready — the rest makes you *competitive*.
 - Some days an exercise is a 5-minute warm-up; some are a real puzzle. That's normal.
 - The exercises in each chapter go easy → harder. Exercises **1–2** are warm-ups,
   **3–7** are the main idea, **8–10** are challenge/stretch. It's okay to come back to

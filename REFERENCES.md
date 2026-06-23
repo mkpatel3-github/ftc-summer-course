@@ -14,7 +14,15 @@ instead of copying them in — open them on GitHub to read the originals.
   - `TeamCode/.../util/hardware/Motor.java`, `StepperServo.java` — hardware wrappers
   - `TeamCode/.../subsystems/claw/Claw.java` — `detectSample()` color logic (Chapter 5 fixes its unfinished version)
   - `TeamCode/.../teleop/TeleOpMainRed.java` — gamepad edge-detection + action queue (Chapter 6)
-  - `TeamCode/.../auton/BucketSide.java` — RoadRunner autonomous (Chapter 9)
+  - `TeamCode/.../auton/BucketSide.java` — RoadRunner autonomous (Chapters 9 & 16)
+  - `TeamCode/.../roadrunner/KalmanDrive.java` — Pinpoint odometry + Kalman fusion of
+    odometry and a Limelight camera (Chapters 13 & 14). Credit: portions BSD-3 by j5155 /
+    FTC 12087 Capital City Dynamics, portions MIT by goBILDA.
+  - `TeamCode/.../subsystems/vision/CVMaster.java` — Limelight3A + VisionPortal,
+    `ColorBlobLocatorProcessor` and an AprilTag pipeline (Chapter 14)
+  - `TeamCode/.../commands/` — `CommandMaster.java`, and `commands/primitives/`
+    (`InstantCommand`, `SequentialCommand`, `ParallelCommand`, `LoopCommand`,
+    `SleepCommand`) — the command-based architecture (Chapter 15)
 - **Older seasons:** CenterStage (2023–24) https://github.com/Juice-Robotics/CenterStageV2 ·
   PowerPlay (2022–23) https://github.com/Juice-Robotics/PowerPlay
 - **Team site:** https://juicerobotics.org
@@ -36,4 +44,19 @@ instead of copying them in — open them on GitHub to read the originals.
 - **Official FTC SDK & sample OpModes:**
   https://github.com/FIRST-Tech-Challenge/FtcRobotController
 - **RoadRunner** (autonomous motion library Juice uses):
-  https://github.com/acmerobotics/road-runner
+  https://github.com/acmerobotics/road-runner · docs https://rr.brott.dev
+
+## Modern FTC tools & hardware (Chapters 12–16)
+
+- **Pedro Pathing** — popular newer path follower: https://pedropathing.com ·
+  https://github.com/Pedro-Pathing/PedroPathing
+- **FTCLib / NextFTC / SolversLib** — command-based libraries:
+  https://github.com/FTCLib/FTCLib · https://nextftc.dev ·
+  https://github.com/Pedro-Pathing/SolversLib
+- **VisionPortal & AprilTags** — built into the FTC SDK; concept guides at gm0.org and
+  https://www.ctrlaltftc.com
+- **goBILDA Pinpoint** odometry computer: https://www.gobilda.com (search "Pinpoint")
+- **SparkFun OTOS** optical tracking sensor:
+  https://www.sparkfun.com/products/24904
+- **Limelight 3A** smart camera (used in Juice's `CVMaster.java`):
+  https://limelightvision.io

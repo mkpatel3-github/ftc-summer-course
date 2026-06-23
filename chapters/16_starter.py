@@ -1,15 +1,15 @@
 """
-Chapter 8 — Subsystems & State Machines
+Chapter 16 — Modern Autonomous: Driving to Poses
 
 This is YOUR workspace. Read the matching lesson first:
-    chapters/08-subsystems-and-state-machines.md
+    chapters/16-modern-autonomous-paths.md
 
 Then solve each exercise below where it says  # ---- YOUR CODE HERE ----.
 Run this file any time to see your output:
-    python chapters/08_starter.py
+    python chapters/16_starter.py
 
 Stuck? Try for real first, THEN peek at:
-    solutions/08_solution.py
+    solutions/16_solution.py
 """
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "sim"))
@@ -20,14 +20,13 @@ from ftcsim import (Robot, Field, Gamepad, IMU, Motor, StepperServo,
                     SleepCommand, CommandScheduler, DriveToPoseAction,
                     SequentialAction, run_action)
 
-print("Chapter 08 - delete this line and start coding your exercises!\n")
+print("Chapter 16 - delete this line and start coding your exercises!\n")
 
 
 # ===========================================================================
 # Exercise 1
-# A Claw class. Write a Claw class with is_open state and methods open(),
-# close(), and status() (returns "OPEN"/"CLOSED"). This mirrors Claw.java's
-# start/stop intake. Use it; print status before and after closing.
+# Drive to a point. Run a single DriveToPoseAction(robot, Pose2d(30, 0, 0))
+# with run_action. Print the final pose — it should be near (30, 0, 0).
 # ===========================================================================
 def exercise_1():
     # ---- YOUR CODE HERE ----
@@ -36,9 +35,8 @@ def exercise_1():
 
 # ===========================================================================
 # Exercise 2
-# Encapsulate a Lift. Write a Lift class wrapping a MyPIDF (from Ch.7) and a
-# ticks value. Methods: run_to_position(target), update() (one PID step),
-# get_pos(). Drive it to 1000 and loop update() until it settles.
+# Drive and turn. Target Pose2d(0, 0, 90) — same spot, but rotate to face
+# 90°. Confirm the heading ends near 90.
 # ===========================================================================
 def exercise_2():
     # ---- YOUR CODE HERE ----
@@ -47,9 +45,9 @@ def exercise_2():
 
 # ===========================================================================
 # Exercise 3
-# The Levels enum. Use Python's enum to recreate a trimmed Levels: INIT,
-# INTAKE, INTERMEDIATE, LOW_BASKET, HIGH_BASKET, LOW_RUNG, HIGH_RUNG. Print
-# all of them.
+# Two legs. SequentialAction of (20, 0, 0) then (20, 20, 0). Print the pose
+# after each? (Tip: run them as two separate run_action calls so you can
+# print between.) The robot should trace an L.
 # ===========================================================================
 def exercise_3():
     # ---- YOUR CODE HERE ----
@@ -58,10 +56,9 @@ def exercise_3():
 
 # ===========================================================================
 # Exercise 4
-# Lift presets. Give Lift a run_to_preset(level) method that maps each
-# Levels value to a target tick count (use Juice's real numbers:
-# HIGH_BASKET=2160, HIGH_RUNG=960, INTAKE=-15, others 0). Send it to
-# HIGH_BASKET and settle.
+# A box. Sequence four targets that drive a 24" square back to the start.
+# Print the final pose; it should be near (0,0). Compare in a comment to
+# Chapter 12's *timed* square — which is more reliable and why?
 # ===========================================================================
 def exercise_4():
     # ---- YOUR CODE HERE ----
@@ -70,10 +67,10 @@ def exercise_4():
 
 # ===========================================================================
 # Exercise 5
-# A Robot with a state. Write a small Robot wrapper class holding a lift and
-# a state field (a Levels). Methods high_basket() and high_rung() that set
-# BOTH the lift preset AND self.state. Verify state updates when you call
-# them.
+# Tolerance matters. Run the same target with tol=0.5 and again with
+# tol=5.0. Print both final poses and the difference. In a comment: why
+# might a team use a *looser* tolerance on early legs and a tight one on the
+# scoring leg?
 # ===========================================================================
 def exercise_5():
     # ---- YOUR CODE HERE ----
@@ -82,10 +79,10 @@ def exercise_5():
 
 # ===========================================================================
 # Exercise 6
-# smartOuttake. Add smart_outtake() that returns "DROP SAMPLE" if state is a
-# basket, "RELEASE SPECIMEN" if state is a rung, else "NOTHING". Test it
-# after calling high_basket() and after high_rung(). (This is the real
-# smartOuttake logic.)
+# Start somewhere else. Make Robot(start_x=-30, start_y=-60,
+# start_heading=0) (like a real autonomous start corner) and drive to
+# Pose2d(0, 0, 0). Pose-based autonomous doesn't care where you start, as
+# long as odometry is seeded — show it arrives.
 # ===========================================================================
 def exercise_6():
     # ---- YOUR CODE HERE ----
@@ -94,10 +91,10 @@ def exercise_6():
 
 # ===========================================================================
 # Exercise 7
-# toggleGamepiece. Add a mode ("SAMPLE"/"SPECIMEN") and a toggle_gamepiece()
-# method that flips it (mirror Robot.toggleGamepiece). Also add
-# tele_deposit_preset() that calls high_basket() if mode is SAMPLE else
-# high_rung(). Test both modes.
+# Battery-proof. This is the headline. In a comment, explain why this
+# pose-based action arrives at the same place whether the battery is full or
+# low, while Chapter 9's "drive 1.5s at 0.6 power" would not. Tie it back to
+# the controller closing the error.
 # ===========================================================================
 def exercise_7():
     # ---- YOUR CODE HERE ----
@@ -106,11 +103,10 @@ def exercise_7():
 
 # ===========================================================================
 # Exercise 8
-# Legal transitions. Not every state can follow every other. Write a
-# can_transition(from_state, to_state) using a dictionary of allowed
-# next-states (e.g. from INTAKE you can go to INTERMEDIATE; from
-# INTERMEDIATE to any scoring level; you can't jump straight
-# INTAKE→HIGH_BASKET). Test a legal and an illegal transition.
+# Mimic BucketSide. Juice's BucketSide.java drives to a scoring spot,
+# scores, then to a sample, repeatedly. Build a SequentialAction that drives
+# to a "basket" Pose2d(-50, -50, 45), prints "SCORE", drives to a "sample"
+# Pose2d(-30, -30, 0), prints "PICKUP". Run it and print the final pose.
 # ===========================================================================
 def exercise_8():
     # ---- YOUR CODE HERE ----
@@ -119,10 +115,10 @@ def exercise_8():
 
 # ===========================================================================
 # Exercise 9
-# Full sequence. Drive the state machine through a realistic scoring cycle:
-# INIT → INTAKE → INTERMEDIATE → HIGH_BASKET → (smart_outtake) →
-# INTERMEDIATE. At each step print the state and, for scoring states, the
-# lift target. Reject any illegal transition using exercise 8.
+# Combine with a command. Bridge Chapters 15 and 16: after driving to a pose
+# with an action, run an InstantCommand (or just call a function) that
+# prints "LIFT + SCORE". In a comment, describe how a real auto interleaves
+# *driving* (actions) with *mechanisms* (commands) — often in parallel.
 # ===========================================================================
 def exercise_9():
     # ---- YOUR CODE HERE ----
@@ -131,12 +127,11 @@ def exercise_9():
 
 # ===========================================================================
 # Exercise 10
-# Design your own subsystem. Pick a mechanism from a real FTC game (an
-# intake, a shooter, a hanger). On paper/comment: list its states, its
-# hardware (motors/servos/ sensors), and the public methods you'd expose.
-# Then implement a minimal version as a Python class with at least 2 states
-# and a update()/status(). This is exactly the first thing you'll do on
-# Juice for a new season.
+# Design your own autonomous. Pick a made-up mission (e.g., "score 3 samples
+# in the basket, then park"). In a comment block, write the full sequence of
+# Pose2d targets and mechanism actions you'd run, in order. Then implement
+# as much as you can with DriveToPoseAction + prints. This is a real
+# autonomous plan — the capstone of the whole course.
 # ===========================================================================
 def exercise_10():
     # ---- YOUR CODE HERE ----

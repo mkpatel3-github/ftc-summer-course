@@ -1,15 +1,15 @@
 """
-Chapter 8 — Subsystems & State Machines
+Chapter 11 — Crossing to Java
 
 This is YOUR workspace. Read the matching lesson first:
-    chapters/08-subsystems-and-state-machines.md
+    chapters/11-crossing-to-java.md
 
 Then solve each exercise below where it says  # ---- YOUR CODE HERE ----.
 Run this file any time to see your output:
-    python chapters/08_starter.py
+    python chapters/11_starter.py
 
 Stuck? Try for real first, THEN peek at:
-    solutions/08_solution.py
+    solutions/11_solution.py
 """
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "sim"))
@@ -20,14 +20,13 @@ from ftcsim import (Robot, Field, Gamepad, IMU, Motor, StepperServo,
                     SleepCommand, CommandScheduler, DriveToPoseAction,
                     SequentialAction, run_action)
 
-print("Chapter 08 - delete this line and start coding your exercises!\n")
+print("Chapter 11 - delete this line and start coding your exercises!\n")
 
 
 # ===========================================================================
 # Exercise 1
-# A Claw class. Write a Claw class with is_open state and methods open(),
-# close(), and status() (returns "OPEN"/"CLOSED"). This mirrors Claw.java's
-# start/stop intake. Use it; print status before and after closing.
+# Type tags. Convert these three Python lines to Java, with the right type
+# and a semicolon each: wheels = 4, power = 0.6, name = "Juice".
 # ===========================================================================
 def exercise_1():
     # ---- YOUR CODE HERE ----
@@ -36,9 +35,8 @@ def exercise_1():
 
 # ===========================================================================
 # Exercise 2
-# Encapsulate a Lift. Write a Lift class wrapping a MyPIDF (from Ch.7) and a
-# ticks value. Methods: run_to_position(target), update() (one PID step),
-# get_pos(). Drive it to 1000 and loop update() until it settles.
+# An if/else. Convert this to Java (braces and parentheses): if speed > 1.0:
+# / speed = 1.0 / else: / speed = speed. (This is clamping.)
 # ===========================================================================
 def exercise_2():
     # ---- YOUR CODE HERE ----
@@ -47,9 +45,8 @@ def exercise_2():
 
 # ===========================================================================
 # Exercise 3
-# The Levels enum. Use Python's enum to recreate a trimmed Levels: INIT,
-# INTAKE, INTERMEDIATE, LOW_BASKET, HIGH_BASKET, LOW_RUNG, HIGH_RUNG. Print
-# all of them.
+# A for loop. Python for i in range(4): printing i. Write the Java for (int
+# i = 0; i < 4; i++) { ... } version that does the same.
 # ===========================================================================
 def exercise_3():
     # ---- YOUR CODE HERE ----
@@ -58,10 +55,9 @@ def exercise_3():
 
 # ===========================================================================
 # Exercise 4
-# Lift presets. Give Lift a run_to_preset(level) method that maps each
-# Levels value to a target tick count (use Juice's real numbers:
-# HIGH_BASKET=2160, HIGH_RUNG=960, INTAKE=-15, others 0). Send it to
-# HIGH_BASKET and settle.
+# A method signature. Convert def clamp(power): that returns a clamped value
+# into a Java method header: double clamp(double power) { ... }. Write the
+# whole method.
 # ===========================================================================
 def exercise_4():
     # ---- YOUR CODE HERE ----
@@ -70,10 +66,9 @@ def exercise_4():
 
 # ===========================================================================
 # Exercise 5
-# A Robot with a state. Write a small Robot wrapper class holding a lift and
-# a state field (a Levels). Methods high_basket() and high_rung() that set
-# BOTH the lift preset AND self.state. Verify state updates when you call
-# them.
+# The drive formula. Take wheel_powers(x, y, rx) from Chapter 6 and write it
+# in Java: four double variables using Juice's exact formula, ending in
+# semicolons.
 # ===========================================================================
 def exercise_5():
     # ---- YOUR CODE HERE ----
@@ -82,10 +77,9 @@ def exercise_5():
 
 # ===========================================================================
 # Exercise 6
-# smartOuttake. Add smart_outtake() that returns "DROP SAMPLE" if state is a
-# basket, "RELEASE SPECIMEN" if state is a rung, else "NOTHING". Test it
-# after calling high_basket() and after high_rung(). (This is the real
-# smartOuttake logic.)
+# snake → camel. Rename each to Java style: set_drive_power,
+# get_encoder_value, reset_heading, left_stick_y, is_red_alliance. (One of
+# these stays the same in FTC — which, and why? Hint: gamepad fields.)
 # ===========================================================================
 def exercise_6():
     # ---- YOUR CODE HERE ----
@@ -94,10 +88,9 @@ def exercise_6():
 
 # ===========================================================================
 # Exercise 7
-# toggleGamepiece. Add a mode ("SAMPLE"/"SPECIMEN") and a toggle_gamepiece()
-# method that flips it (mirror Robot.toggleGamepiece). Also add
-# tele_deposit_preset() that calls high_basket() if mode is SAMPLE else
-# high_rung(). Test both modes.
+# A telemetry block. Convert a 3-line Python telemetry print (MODE, pose,
+# loop) into Java telemetry.addData(...) calls followed by
+# telemetry.update();.
 # ===========================================================================
 def exercise_7():
     # ---- YOUR CODE HERE ----
@@ -106,11 +99,10 @@ def exercise_7():
 
 # ===========================================================================
 # Exercise 8
-# Legal transitions. Not every state can follow every other. Write a
-# can_transition(from_state, to_state) using a dictionary of allowed
-# next-states (e.g. from INTAKE you can go to INTERMEDIATE; from
-# INTERMEDIATE to any scoring level; you can't jump straight
-# INTAKE→HIGH_BASKET). Test a legal and an illegal transition.
+# Wrap a loop in an OpMode. Take your Chapter 6 mini-TeleOp loop body and
+# write the full runOpMode() skeleton around it (class header,
+# waitForStart(), the while (opModeIsActive()) loop). The loop body can stay
+# as a // ... comment.
 # ===========================================================================
 def exercise_8():
     # ---- YOUR CODE HERE ----
@@ -119,10 +111,10 @@ def exercise_8():
 
 # ===========================================================================
 # Exercise 9
-# Full sequence. Drive the state machine through a realistic scoring cycle:
-# INIT → INTAKE → INTERMEDIATE → HIGH_BASKET → (smart_outtake) →
-# INTERMEDIATE. At each step print the state and, for scoring states, the
-# lift target. Reject any illegal transition using exercise 8.
+# A whole subsystem. Convert your Chapter 8 Lift class (constructor +
+# set_target + update) into a Java class sketch: public class Lift { ... }
+# with typed fields and methods. Logic in comments is fine; get the *shape*
+# right.
 # ===========================================================================
 def exercise_9():
     # ---- YOUR CODE HERE ----
@@ -131,12 +123,10 @@ def exercise_9():
 
 # ===========================================================================
 # Exercise 10
-# Design your own subsystem. Pick a mechanism from a real FTC game (an
-# intake, a shooter, a hanger). On paper/comment: list its states, its
-# hardware (motors/servos/ sensors), and the public methods you'd expose.
-# Then implement a minimal version as a Python class with at least 2 states
-# and a update()/status(). This is exactly the first thing you'll do on
-# Juice for a new season.
+# Spot the bugs. Here is Java with four beginner mistakes. In a comment,
+# list each bug and the fix: java public void drive(double x double y) {
+# double power = x + y if power > 1 { power = 1; }
+# telemetry.addData("power", power) }
 # ===========================================================================
 def exercise_10():
     # ---- YOUR CODE HERE ----
