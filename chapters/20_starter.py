@@ -1,15 +1,15 @@
 """
-Chapter 3 — Encoders & Distance
+Chapter 20 — Swappable Localizers
 
 This is YOUR workspace. Read the matching lesson first:
-    chapters/03-encoders-and-distance.md
+    chapters/20-swappable-localizers.md
 
 Then solve each exercise below where it says  # ---- YOUR CODE HERE ----.
 Run this file any time to see your output:
-    python chapters/03_starter.py
+    python chapters/20_starter.py
 
 Stuck? Try for real first, THEN peek at:
-    solutions/03_solution.py
+    solutions/20_solution.py
 """
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "sim"))
@@ -23,13 +23,14 @@ from ftcsim import (Robot, Field, Gamepad, IMU, Motor, StepperServo,
                     AsymmetricMotionProfile, Localizer, DriveEncoderLocalizer,
                     DeadWheelLocalizer, OTOSLocalizer)
 
-print("Chapter 03 - delete this line and start coding your exercises!\n")
+print("Chapter 20 - delete this line and start coding your exercises!\n")
 
 
 # ===========================================================================
 # Exercise 1
-# Read ticks. Reset front_left, drive forward 1s, print the encoder value.
-# How many inches is that (divide by 45)?
+# Three localizers, one robot. Make a Robot, then create all three localizer
+# types on it. Print each one's get_pose() right away. Confirm all three
+# report (about) the starting pose.
 # ===========================================================================
 def exercise_1():
     # ---- YOUR CODE HERE ----
@@ -38,9 +39,9 @@ def exercise_1():
 
 # ===========================================================================
 # Exercise 2
-# Two conversion functions. Write inches_to_ticks(inches) and
-# ticks_to_inches(ticks). Test that converting 24 inches → ticks → inches
-# gives back 24.
+# Code against the interface. Write report(localizer) that just calls
+# localizer.get_pose() and prints it — with no mention of which type it is.
+# Call it with all three. This function is "interface-only" code.
 # ===========================================================================
 def exercise_2():
     # ---- YOUR CODE HERE ----
@@ -49,9 +50,9 @@ def exercise_2():
 
 # ===========================================================================
 # Exercise 3
-# Drive exactly 24 inches. Use the while-loop pattern to drive forward until
-# the encoder shows 24 inches, then stop. Print the final pose — x should be
-# near 24.
+# Drive and compare. Drive the robot forward 2s. Then read all three
+# localizers and print their poses. They should be close, but not identical
+# — note which drifts most.
 # ===========================================================================
 def exercise_3():
     # ---- YOUR CODE HERE ----
@@ -60,8 +61,10 @@ def exercise_3():
 
 # ===========================================================================
 # Exercise 4
-# A reusable drive_inches. Wrap exercise 3 into a function
-# drive_inches(robot, inches, power=0.5). Drive 12, then 36 inches with it.
+# Feel the drift. Read each localizer 20 times *without moving the robot*
+# and print the first and last reading. Rank the three by how much they
+# wander. In a comment, match each to its real-world cause (wheel slip /
+# clean pods / optical jitter).
 # ===========================================================================
 def exercise_4():
     # ---- YOUR CODE HERE ----
@@ -70,9 +73,10 @@ def exercise_4():
 
 # ===========================================================================
 # Exercise 5
-# Backward by encoder. Make drive_inches handle negative distances: if
-# inches is negative, drive at negative power and loop until the encoder
-# drops below the target. Test with -12.
+# A swappable drive function. Write drive_until_x(robot, localizer,
+# target_x) that drives forward until localizer.get_pose().x >= target_x.
+# Run it with a DriveEncoderLocalizer and again with a DeadWheelLocalizer —
+# same function, swapped strategy. Print where each stopped.
 # ===========================================================================
 def exercise_5():
     # ---- YOUR CODE HERE ----
@@ -81,10 +85,10 @@ def exercise_5():
 
 # ===========================================================================
 # Exercise 6
-# Why time is worse (experiment). Drive 24 inches by *time* (guess the
-# seconds at 0.5 power), then by *encoder*. Run each from the same start.
-# Then imagine the battery is weak: in the sim, lower the power to 0.3 and
-# repeat both. Which method still ends at 24 inches? Explain in a comment.
+# Make your own localizer. Subclass Localizer to create PerfectLocalizer
+# whose get_pose() returns the robot's true pose with zero drift/noise (use
+# robot.get_pose()). Pass it to your report() from exercise 2 — it just
+# works, because it honors the contract.
 # ===========================================================================
 def exercise_6():
     # ---- YOUR CODE HERE ----
@@ -93,10 +97,10 @@ def exercise_6():
 
 # ===========================================================================
 # Exercise 7
-# Square dance. Make the robot trace a square: drive 24 inches, turn 90°
-# (set_drive_power(0,0,0.5) until imu.get_heading() reaches the next
-# corner), repeat 4 times. (Reuse Chapter 4's turn idea early — or just turn
-# by time for now.) Print the pose after each side.
+# The contract enforced. Create a broken "localizer" class that forgets to
+# implement get_pose() (just pass the base). Call get_pose() on it inside a
+# try/except and print the error. In a comment, explain how the interface
+# tells you *at the point of use* that you broke the contract.
 # ===========================================================================
 def exercise_7():
     # ---- YOUR CODE HERE ----
@@ -105,10 +109,10 @@ def exercise_7():
 
 # ===========================================================================
 # Exercise 8
-# Average the encoders. A real robot reads *all four* wheel encoders and
-# averages them for a better distance estimate (one wheel can slip). Write
-# average_distance_inches(robot) that averages the four encoders and
-# converts to inches. Drive forward and print it.
+# Strategy at runtime. Put your three localizers in a dict keyed by name
+# ("encoder", "deadwheel", "otos"). Write code that picks one by a string
+# variable and uses it — simulating choosing your hardware from a config
+# without changing logic.
 # ===========================================================================
 def exercise_8():
     # ---- YOUR CODE HERE ----
@@ -117,10 +121,10 @@ def exercise_8():
 
 # ===========================================================================
 # Exercise 9
-# Slow down near the target (taste of PID). Modify drive_inches so that when
-# the robot is within the last 6 inches, it uses lower power (e.g. 0.2)
-# instead of full. Does it overshoot less? This is the *intuition* behind
-# the "P" in PID you'll build later.
+# Best of both (preview). Drive forward 2s. The drive-encoder localizer has
+# drifted; a (hypothetical) perfect one hasn't. Print the gap between them.
+# In a comment, predict how you'd *combine* a drifting-but-smooth source
+# with an absolute one — this is exactly Chapter 21 (sensor fusion).
 # ===========================================================================
 def exercise_9():
     # ---- YOUR CODE HERE ----
@@ -129,11 +133,11 @@ def exercise_9():
 
 # ===========================================================================
 # Exercise 10
-# Mission math. A game element is 30 inches forward and the robot must stop
-# 4 inches short to avoid knocking it. Using only drive_inches, write code
-# that ends with the robot 26 inches forward. Then write (comment) what
-# could still make it inaccurate on a real field (wheel slip, bumps,
-# battery) — and which sensor from later chapters fixes heading drift.
+# Why interfaces win. In a comment block, describe a concrete mid-season
+# scenario: your team buys a Pinpoint to replace drive-encoder odometry.
+# With the Localizer interface, how many files change? Without it (position
+# code copy-pasted everywhere), what's the risk? This is the design lesson
+# of the chapter.
 # ===========================================================================
 def exercise_10():
     # ---- YOUR CODE HERE ----

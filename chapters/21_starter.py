@@ -1,15 +1,15 @@
 """
-Chapter 3 — Encoders & Distance
+Chapter 21 — Sensor Fusion & the Kalman Filter
 
 This is YOUR workspace. Read the matching lesson first:
-    chapters/03-encoders-and-distance.md
+    chapters/21-sensor-fusion-kalman.md
 
 Then solve each exercise below where it says  # ---- YOUR CODE HERE ----.
 Run this file any time to see your output:
-    python chapters/03_starter.py
+    python chapters/21_starter.py
 
 Stuck? Try for real first, THEN peek at:
-    solutions/03_solution.py
+    solutions/21_solution.py
 """
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "sim"))
@@ -23,13 +23,14 @@ from ftcsim import (Robot, Field, Gamepad, IMU, Motor, StepperServo,
                     AsymmetricMotionProfile, Localizer, DriveEncoderLocalizer,
                     DeadWheelLocalizer, OTOSLocalizer)
 
-print("Chapter 03 - delete this line and start coding your exercises!\n")
+print("Chapter 21 - delete this line and start coding your exercises!\n")
 
 
 # ===========================================================================
 # Exercise 1
-# Read ticks. Reset front_left, drive forward 1s, print the encoder value.
-# How many inches is that (divide by 45)?
+# Build your own. Write the MyKalman class from the lesson. Run update(5, 4)
+# once from a 0 start and print the result. Compare it to the sim's
+# KalmanFilter(q,r) with the same Q/R — they should match.
 # ===========================================================================
 def exercise_1():
     # ---- YOUR CODE HERE ----
@@ -38,9 +39,10 @@ def exercise_1():
 
 # ===========================================================================
 # Exercise 2
-# Two conversion functions. Write inches_to_ticks(inches) and
-# ticks_to_inches(ticks). Test that converting 24 inches → ticks → inches
-# gives back 24.
+# Trust knobs. With your filter, fuse the same inputs (model_delta=10,
+# measurement=0) twice: once with a large R (trust sensor little) and once
+# with a small R (trust sensor a lot). Print both outputs and explain the
+# difference in a comment.
 # ===========================================================================
 def exercise_2():
     # ---- YOUR CODE HERE ----
@@ -49,9 +51,10 @@ def exercise_2():
 
 # ===========================================================================
 # Exercise 3
-# Drive exactly 24 inches. Use the while-loop pattern to drive forward until
-# the encoder shows 24 inches, then stop. Print the final pose — x should be
-# near 24.
+# Smooth a noisy signal. Feed your filter a sequence of noisy measurements
+# of a value that's really 50 (e.g. 48, 53, 49, 51, 47...) with
+# model_delta=0 each step. Print the estimate converging toward 50 and
+# staying steady — the filter is smoothing.
 # ===========================================================================
 def exercise_3():
     # ---- YOUR CODE HERE ----
@@ -60,8 +63,9 @@ def exercise_3():
 
 # ===========================================================================
 # Exercise 4
-# A reusable drive_inches. Wrap exercise 3 into a function
-# drive_inches(robot, inches, power=0.5). Drive 12, then 36 inches with it.
+# See the drift. Drive forward 2s with robot.odometry.drift_per_read = 0.05.
+# Print the odometry pose's x vs the true robot.x. Show odometry now reads
+# too high — that's accumulated drift.
 # ===========================================================================
 def exercise_4():
     # ---- YOUR CODE HERE ----
@@ -70,9 +74,9 @@ def exercise_4():
 
 # ===========================================================================
 # Exercise 5
-# Backward by encoder. Make drive_inches handle negative distances: if
-# inches is negative, drive at negative power and loop until the encoder
-# drops below the target. Test with -12.
+# See the noise. With robot.camera.noise = 1.0 and tags placed, read
+# robot.camera.localize().x five times without moving. Show it jumps around
+# the true value — absolute but jittery.
 # ===========================================================================
 def exercise_5():
     # ---- YOUR CODE HERE ----
@@ -81,10 +85,10 @@ def exercise_5():
 
 # ===========================================================================
 # Exercise 6
-# Why time is worse (experiment). Drive 24 inches by *time* (guess the
-# seconds at 0.5 power), then by *encoder*. Run each from the same start.
-# Then imagine the battery is weak: in the sim, lower the power to 0.3 and
-# repeat both. Which method still ends at 24 inches? Explain in a comment.
+# Fuse x, one step. Each loop you have: model_delta = how far odometry
+# *says* x moved this step, and measurement = the camera's x. Fuse them with
+# a KalmanFilter for one step and print the fused x. (You're combining
+# exercises 4 and 5.)
 # ===========================================================================
 def exercise_6():
     # ---- YOUR CODE HERE ----
@@ -93,10 +97,10 @@ def exercise_6():
 
 # ===========================================================================
 # Exercise 7
-# Square dance. Make the robot trace a square: drive 24 inches, turn 90°
-# (set_drive_power(0,0,0.5) until imu.get_heading() reaches the next
-# corner), repeat 4 times. (Reuse Chapter 4's turn idea early — or just turn
-# by time for now.) Print the pose after each side.
+# Fuse over a whole drive. Drive forward 2s. Each loop, feed the Kalman
+# filter the odometry delta (predict) and the camera x (correct). Print, at
+# the end, the fused x, the raw odometry x, and the true x. Show fused is
+# closer to true than drifting odometry.
 # ===========================================================================
 def exercise_7():
     # ---- YOUR CODE HERE ----
@@ -105,10 +109,10 @@ def exercise_7():
 
 # ===========================================================================
 # Exercise 8
-# Average the encoders. A real robot reads *all four* wheel encoders and
-# averages them for a better distance estimate (one wheel can slip). Write
-# average_distance_inches(robot) that averages the four encoders and
-# converts to inches. Drive forward and print it.
+# Tune Q and R. Repeat exercise 7 with three (Q, R) settings:
+# trust-camera-heavy, trust-odometry-heavy, and balanced. Print the final
+# error for each. Find the one that's smoothest *and* accurate. In a
+# comment, relate Q/R tuning to PID gain tuning.
 # ===========================================================================
 def exercise_8():
     # ---- YOUR CODE HERE ----
@@ -117,10 +121,10 @@ def exercise_8():
 
 # ===========================================================================
 # Exercise 9
-# Slow down near the target (taste of PID). Modify drive_inches so that when
-# the robot is within the last 6 inches, it uses lower power (e.g. 0.2)
-# instead of full. Does it overshoot less? This is the *intuition* behind
-# the "P" in PID you'll build later.
+# Camera drops out. Realistic case: the camera only sees a tag for part of
+# the drive. When localize() returns None, skip the correct step (predict
+# only). Show the fused estimate coasts on odometry during the blackout and
+# re-snaps when the tag reappears.
 # ===========================================================================
 def exercise_9():
     # ---- YOUR CODE HERE ----
@@ -129,11 +133,11 @@ def exercise_9():
 
 # ===========================================================================
 # Exercise 10
-# Mission math. A game element is 30 inches forward and the robot must stop
-# 4 inches short to avoid knocking it. Using only drive_inches, write code
-# that ends with the robot 26 inches forward. Then write (comment) what
-# could still make it inaccurate on a real field (wheel slip, bumps,
-# battery) — and which sensor from later chapters fixes heading drift.
+# Two-axis fusion. Run two Kalman filters — one for x, one for y — to fuse a
+# full 2D position over a forward+strafe path. Print the fused (x, y) vs
+# true (x, y). In a comment, note this is exactly how j5155's
+# Vector2dKalmanFilter composes two 1-D filters, and how Juice's KalmanDrive
+# keeps its pose honest all match.
 # ===========================================================================
 def exercise_10():
     # ---- YOUR CODE HERE ----

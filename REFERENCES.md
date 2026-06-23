@@ -33,6 +33,30 @@ instead of copying them in — open them on GitHub to read the originals.
 > git clone https://github.com/Juice-Robotics/IntoTheDeep.git
 > ```
 
+## Top-team codebases — the pro-architecture chapters (17–22)
+
+Chapters 17–22 teach patterns lifted straight from the public code of four widely studied
+teams. Clone any of these to read the real Java the lessons point at:
+
+- **ACME Robotics (#8367) — RoadRunner quickstart:**
+  https://github.com/acmerobotics/road-runner-quickstart
+  - `.../localization/Localizer.java` + `ThreeDeadWheelLocalizer`, `TwoDeadWheelLocalizer`,
+    `OTOSLocalizer`, `PinpointLocalizer` — the swappable-localizer Strategy pattern (Chapter 20)
+  - `.../tuning/` OpModes (`ManualFeedforwardTuner`, drive velocity/feedforward tuners) +
+    `@Config` / FTC Dashboard — the live tuning workflow (Chapter 22)
+- **Seattle Solvers (#23511) — Into the Deep:** https://github.com/FTC-23511/Into-the-Deep-2025
+  - `.../hardware/Robot.java` — the `getInstance()` hardware singleton (Chapter 17)
+  - `.../hardware/Globals.java` — every tunable number/enum in one constants file (Chapter 17)
+  - SolversLib (their FTCLib fork): https://github.com/Pedro-Pathing/SolversLib
+- **Capital City Dynamics / j5155 (#12087) — 2024:** https://github.com/jdhs-ftc/2024
+  - `.../helpers/control/KalmanFilter.java` — the 1-D Kalman filter you rebuild (Chapter 21)
+  - `.../AprilTagDrive.java` + OTOS instructions — odometry predict / AprilTag correct
+- **KookyBotz (#16379) — CenterStage:** https://github.com/KookyBotz/CenterStage
+  - `.../opmode/teleop/Duo.java` — the `clearBulkCache(); read(); periodic(); write();`
+    loop structure (Chapter 18)
+  - `.../utils/AsymmetricMotionProfile.java`, `WActuatorGroup.java` — hand-written
+    asymmetric profile + PID + feedforward (Chapter 19)
+
 ## Books & guides
 
 - **Learn Java for FTC** — Alan Smith (free): https://github.com/alan412/LearnJavaForFTC

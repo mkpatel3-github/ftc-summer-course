@@ -30,7 +30,10 @@ from ftcsim import (Robot, Field, Gamepad, IMU, Motor, StepperServo,
                     PIDFController, run_for, Pose2d, AprilTag, Odometry, Camera,
                     Command, InstantCommand, SequentialCommand, ParallelCommand,
                     SleepCommand, CommandScheduler, DriveToPoseAction,
-                    SequentialAction, run_action)
+                    SequentialAction, run_action,
+                    LynxModule, reset_hw_reads, hw_reads, KalmanFilter,
+                    AsymmetricMotionProfile, Localizer, DriveEncoderLocalizer,
+                    DeadWheelLocalizer, OTOSLocalizer)
 
 print("Chapter {num} - delete this line and start coding your exercises!\\n")
 

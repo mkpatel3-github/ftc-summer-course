@@ -1,15 +1,15 @@
 """
-Chapter 3 — Encoders & Distance
+Chapter 18 — Loop Time & Bulk Reads
 
 This is YOUR workspace. Read the matching lesson first:
-    chapters/03-encoders-and-distance.md
+    chapters/18-loop-time-and-bulk-reads.md
 
 Then solve each exercise below where it says  # ---- YOUR CODE HERE ----.
 Run this file any time to see your output:
-    python chapters/03_starter.py
+    python chapters/18_starter.py
 
 Stuck? Try for real first, THEN peek at:
-    solutions/03_solution.py
+    solutions/18_solution.py
 """
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "sim"))
@@ -23,13 +23,14 @@ from ftcsim import (Robot, Field, Gamepad, IMU, Motor, StepperServo,
                     AsymmetricMotionProfile, Localizer, DriveEncoderLocalizer,
                     DeadWheelLocalizer, OTOSLocalizer)
 
-print("Chapter 03 - delete this line and start coding your exercises!\n")
+print("Chapter 18 - delete this line and start coding your exercises!\n")
 
 
 # ===========================================================================
 # Exercise 1
-# Read ticks. Reset front_left, drive forward 1s, print the encoder value.
-# How many inches is that (divide by 45)?
+# Count a naive read. Reset the counter, read all 4 drive encoders
+# separately (front_left, front_right, back_left, back_right), and print
+# hw_reads(). (Expect 4.)
 # ===========================================================================
 def exercise_1():
     # ---- YOUR CODE HERE ----
@@ -38,9 +39,9 @@ def exercise_1():
 
 # ===========================================================================
 # Exercise 2
-# Two conversion functions. Write inches_to_ticks(inches) and
-# ticks_to_inches(ticks). Test that converting 24 inches → ticks → inches
-# gives back 24.
+# Count a naive loop. Reset, then in a for loop of 10 "loops" read all 4
+# encoders each time. Print the total. (Expect 40 — this is what a slow
+# robot does.)
 # ===========================================================================
 def exercise_2():
     # ---- YOUR CODE HERE ----
@@ -49,9 +50,10 @@ def exercise_2():
 
 # ===========================================================================
 # Exercise 3
-# Drive exactly 24 inches. Use the while-loop pattern to drive forward until
-# the encoder shows 24 inches, then stop. Print the final pose — x should be
-# near 24.
+# Turn on MANUAL caching. Set
+# robot.hub.set_bulk_caching_mode(LynxModule.MANUAL). Reset the counter.
+# Call robot.hub.clear_bulk_cache() once, then read all 4 encoders. Print
+# hw_reads(). (Expect 1 — one bulk read served all four.)
 # ===========================================================================
 def exercise_3():
     # ---- YOUR CODE HERE ----
@@ -60,8 +62,9 @@ def exercise_3():
 
 # ===========================================================================
 # Exercise 4
-# A reusable drive_inches. Wrap exercise 3 into a function
-# drive_inches(robot, inches, power=0.5). Drive 12, then 36 inches with it.
+# The big comparison. Redo exercise 2 but with MANUAL caching and a
+# clear_bulk_cache() at the top of each of the 10 loops. Print the total and
+# the speedup factor vs exercise 2. (Expect 10 reads → 4× fewer.)
 # ===========================================================================
 def exercise_4():
     # ---- YOUR CODE HERE ----
@@ -70,9 +73,10 @@ def exercise_4():
 
 # ===========================================================================
 # Exercise 5
-# Backward by encoder. Make drive_inches handle negative distances: if
-# inches is negative, drive at negative power and loop until the encoder
-# drops below the target. Test with -12.
+# Forgot to clear. With MANUAL mode on, run 5 loops but *don't* call
+# clear_bulk_cache() at all (only once before the loop). Read an encoder
+# each loop and watch the value go stale (it never updates). In a comment:
+# this is the #1 bulk-read bug — explain it.
 # ===========================================================================
 def exercise_5():
     # ---- YOUR CODE HERE ----
@@ -81,10 +85,9 @@ def exercise_5():
 
 # ===========================================================================
 # Exercise 6
-# Why time is worse (experiment). Drive 24 inches by *time* (guess the
-# seconds at 0.5 power), then by *encoder*. Run each from the same start.
-# Then imagine the battery is weak: in the sim, lower the power to 0.3 and
-# repeat both. Which method still ends at 24 inches? Explain in a comment.
+# AUTO mode. Switch to LynxModule.AUTO, reset, and read the 4 encoders once.
+# Compare the read count to MANUAL. In a comment, state the trade-off
+# between AUTO and MANUAL.
 # ===========================================================================
 def exercise_6():
     # ---- YOUR CODE HERE ----
@@ -93,10 +96,11 @@ def exercise_6():
 
 # ===========================================================================
 # Exercise 7
-# Square dance. Make the robot trace a square: drive 24 inches, turn 90°
-# (set_drive_power(0,0,0.5) until imu.get_heading() reaches the next
-# corner), repeat 4 times. (Reuse Chapter 4's turn idea early — or just turn
-# by time for now.) Print the pose after each side.
+# read → decide → write. Restructure a drive loop into three explicit phases
+# per tick: a read() that snapshots all 4 encoders into a dict, a decide()
+# that computes the average, and a write() that sets drive power. Run 25
+# loops driving forward; print the final average tick count. Keep reads only
+# in read().
 # ===========================================================================
 def exercise_7():
     # ---- YOUR CODE HERE ----
@@ -105,10 +109,10 @@ def exercise_7():
 
 # ===========================================================================
 # Exercise 8
-# Average the encoders. A real robot reads *all four* wheel encoders and
-# averages them for a better distance estimate (one wheel can slip). Write
-# average_distance_inches(robot) that averages the four encoders and
-# converts to inches. Drive forward and print it.
+# Consistent snapshot. Demonstrate the danger of reading mid-loop: in one
+# version read front_left at the start *and* end of the loop body and show
+# they can differ (because robot.step ran). Then show the read-phase version
+# uses one consistent value. Explain why that matters for a PID.
 # ===========================================================================
 def exercise_8():
     # ---- YOUR CODE HERE ----
@@ -117,10 +121,10 @@ def exercise_8():
 
 # ===========================================================================
 # Exercise 9
-# Slow down near the target (taste of PID). Modify drive_inches so that when
-# the robot is within the last 6 inches, it uses lower power (e.g. 0.2)
-# instead of full. Does it overshoot less? This is the *intuition* behind
-# the "P" in PID you'll build later.
+# Loop-time budget. Pretend each real hardware read costs 2 ms. Compute and
+# print the estimated loop time (ms) and loop frequency (Hz) for: (a) 6
+# naive reads per loop, (b) 1 bulk read per loop. (Just arithmetic: time =
+# reads × 2 ms; Hz = 1000 / time.) Show the frequency jump.
 # ===========================================================================
 def exercise_9():
     # ---- YOUR CODE HERE ----
@@ -129,11 +133,11 @@ def exercise_9():
 
 # ===========================================================================
 # Exercise 10
-# Mission math. A game element is 30 inches forward and the robot must stop
-# 4 inches short to avoid knocking it. Using only drive_inches, write code
-# that ends with the robot 26 inches forward. Then write (comment) what
-# could still make it inaccurate on a real field (wheel slip, bumps,
-# battery) — and which sensor from later chapters fixes heading drift.
+# Wire it into a real subsystem. Take your Chapter 17 RobotHardware
+# singleton and add clear_bulk_cache(), read(), periodic(), write() methods.
+# Write a run_loop() that calls them in order each tick. In a comment, map
+# each method to what KookyBotz's Duo.java loop does (scheduler.run();
+# robot.clearBulkCache(); robot.read(); robot.periodic(); robot.write();).
 # ===========================================================================
 def exercise_10():
     # ---- YOUR CODE HERE ----

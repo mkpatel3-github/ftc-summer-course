@@ -15,3 +15,6 @@ __pycache__/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Local Claude Code settings (per-machine permission allowlist) -- not for the public repo
+.claude/

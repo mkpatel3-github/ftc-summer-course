@@ -64,11 +64,13 @@ And the modern skills today's top teams (and Juice) actually run:
 > **Students: read [`STUDENT-START-HERE.md`](STUDENT-START-HERE.md) first** — it walks you
 > through installing Python and running your first exercise, step by step.
 
-- **16 chapters, 10 exercises each = 160 exercises.** Do ~1 exercise per weekday.
-  That's about 14 weeks of weekdays — a full summer, finishing before kickoff.
+- **22 chapters, 10 exercises each = 220 exercises.** Do ~1 exercise per weekday.
+  That's about 18 weeks of weekdays — a full summer, finishing before kickoff.
   Chapters 1–10 are the core; **11–16 are the modern upgrades** (Java conversion,
   field-centric driving, odometry, vision/AprilTags, command-based code, pose-based
-  autonomous) that today's top teams — including Juice — actually run.
+  autonomous); **17–22 are the pro-architecture chapters** (hardware singleton,
+  loop-time/bulk reads, motion profiling, swappable localizers, Kalman sensor fusion,
+  and the live tuning workflow) drawn from the codebases of the top teams below.
 - Each chapter has: a **lesson** (`chapters/NN-name.md`), a **starter file you edit**
   (`chapters/NN_starter.py`), and an **answer key** (`solutions/NN_solution.py`).
   The starter files are generated from the lessons by `tools/make_starters.py`.
@@ -113,6 +115,12 @@ python chapters/02_starter.py
 | 14 | [Vision & AprilTags](chapters/14-vision-and-apriltags.md) | Localize off field tags; find samples by color | `CVMaster.java`, Limelight |
 | 15 | [Command-Based Programming](chapters/15-command-based-programming.md) | Compose behavior as Commands + a scheduler | Juice `commands/` folder |
 | 16 | [Modern Autonomous: Paths](chapters/16-modern-autonomous-paths.md) | Drive to poses; RoadRunner 1.0 Actions / Pedro | `BucketSide.java` |
+| 17 | [Robot Architecture](chapters/17-robot-architecture.md) | Hardware singleton + `Globals` constants file | Solvers `Robot.java`/`Globals.java` |
+| 18 | [Loop Time & Bulk Reads](chapters/18-loop-time-and-bulk-reads.md) | Bulk caching, read→decide→write discipline | KookyBotz `Duo.java` |
+| 19 | [Motion Profiling](chapters/19-motion-profiling.md) | Trapezoidal/asymmetric profile + PID + feedforward | KookyBotz `WActuatorGroup.java` |
+| 20 | [Swappable Localizers](chapters/20-swappable-localizers.md) | Strategy pattern behind a `Localizer` interface | ACME `Localizer.java` |
+| 21 | [Sensor Fusion & Kalman](chapters/21-sensor-fusion-kalman.md) | Fuse drifting odometry + jumpy camera | j5155 `KalmanFilter.java` |
+| 22 | [The Tuning Workflow](chapters/22-tuning-workflow.md) | `@Config` + FTC Dashboard + a tuning method | ACME tuning OpModes |
 
 ## A note to mentors / parents
 
@@ -145,8 +153,15 @@ theirs.** Full thanks and credit to:
 - **Game Manual 0 (gm0) contributors** — the community FTC guide. https://gm0.org ·
   https://github.com/gamemanual0/gm0
 - **CTRL+ALT+FTC** — open-source FTC controls/PID/odometry guide. https://www.ctrlaltftc.com
-- **ACME Robotics** — *RoadRunner*, the motion library Juice uses for autonomous.
-  https://github.com/acmerobotics/road-runner
+- **ACME Robotics (#8367)** — *RoadRunner*, the motion library Juice uses for autonomous,
+  plus the swappable `Localizer` interface and live tuning OpModes (Ch 20, 22).
+  https://github.com/acmerobotics/road-runner-quickstart
+- **Seattle Solvers (#23511)** — the hardware-singleton + `Globals` architecture pattern and
+  SolversLib (Ch 17). https://github.com/FTC-23511
+- **Capital City Dynamics / j5155 (#12087)** — the 1-D `KalmanFilter` and AprilTag-fused
+  drive that inspired the sensor-fusion chapter (Ch 21). https://github.com/jdhs-ftc
+- **KookyBotz (#16379)** — the clean loop structure (read→periodic→write, bulk caching) and
+  the asymmetric motion profile (Ch 18, 19). https://github.com/KookyBotz
 - **FIRST® Tech Challenge** — the official FTC SDK and sample OpModes.
   https://github.com/FIRST-Tech-Challenge/FtcRobotController
 

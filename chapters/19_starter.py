@@ -1,15 +1,15 @@
 """
-Chapter 3 — Encoders & Distance
+Chapter 19 — Motion Profiling: Smooth, Fast, Repeatable
 
 This is YOUR workspace. Read the matching lesson first:
-    chapters/03-encoders-and-distance.md
+    chapters/19-motion-profiling.md
 
 Then solve each exercise below where it says  # ---- YOUR CODE HERE ----.
 Run this file any time to see your output:
-    python chapters/03_starter.py
+    python chapters/19_starter.py
 
 Stuck? Try for real first, THEN peek at:
-    solutions/03_solution.py
+    solutions/19_solution.py
 """
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "sim"))
@@ -23,13 +23,14 @@ from ftcsim import (Robot, Field, Gamepad, IMU, Motor, StepperServo,
                     AsymmetricMotionProfile, Localizer, DriveEncoderLocalizer,
                     DeadWheelLocalizer, OTOSLocalizer)
 
-print("Chapter 03 - delete this line and start coding your exercises!\n")
+print("Chapter 19 - delete this line and start coding your exercises!\n")
 
 
 # ===========================================================================
 # Exercise 1
-# Read ticks. Reset front_left, drive forward 1s, print the encoder value.
-# How many inches is that (divide by 45)?
+# Make a profile. Create AsymmetricMotionProfile(distance=1000, max_v=500,
+# accel=1000, decel=1000). Print total_time, calculate(0), and
+# calculate(total_time). Confirm it starts at 0 and ends at 1000.
 # ===========================================================================
 def exercise_1():
     # ---- YOUR CODE HERE ----
@@ -38,9 +39,9 @@ def exercise_1():
 
 # ===========================================================================
 # Exercise 2
-# Two conversion functions. Write inches_to_ticks(inches) and
-# ticks_to_inches(ticks). Test that converting 24 inches → ticks → inches
-# gives back 24.
+# Sample the curve. Print calculate(t) for t = 0, 0.25, 0.5, 0.75, and
+# total_time of that profile. Confirm the position increases smoothly and
+# lands on 1000.
 # ===========================================================================
 def exercise_2():
     # ---- YOUR CODE HERE ----
@@ -49,9 +50,8 @@ def exercise_2():
 
 # ===========================================================================
 # Exercise 3
-# Drive exactly 24 inches. Use the while-loop pattern to drive forward until
-# the encoder shows 24 inches, then stop. Print the final pose — x should be
-# near 24.
+# Velocity shape. Print velocity(t) across the same times. Confirm it ramps
+# up, holds near max_v, then ramps down to 0 — the trapezoid.
 # ===========================================================================
 def exercise_3():
     # ---- YOUR CODE HERE ----
@@ -60,8 +60,10 @@ def exercise_3():
 
 # ===========================================================================
 # Exercise 4
-# A reusable drive_inches. Wrap exercise 3 into a function
-# drive_inches(robot, inches, power=0.5). Drive 12, then 36 inches with it.
+# Triangle case. Make a *short* move that never reaches cruise:
+# AsymmetricMotionProfile(distance=50, max_v=500, accel=1000, decel=1000).
+# Print total_time and the peak velocity (prof.peak_v). Show peak_v is less
+# than max_v — explain why in a comment.
 # ===========================================================================
 def exercise_4():
     # ---- YOUR CODE HERE ----
@@ -70,9 +72,10 @@ def exercise_4():
 
 # ===========================================================================
 # Exercise 5
-# Backward by encoder. Make drive_inches handle negative distances: if
-# inches is negative, drive at negative power and loop until the encoder
-# drops below the target. Test with -12.
+# Asymmetric. Build two profiles for the same distance: one with accel ==
+# decel, one that decelerates *twice* as hard as it accelerates. Print both
+# total_times and describe, in a comment, when you'd want to brake harder
+# than you launch.
 # ===========================================================================
 def exercise_5():
     # ---- YOUR CODE HERE ----
@@ -81,10 +84,10 @@ def exercise_5():
 
 # ===========================================================================
 # Exercise 6
-# Why time is worse (experiment). Drive 24 inches by *time* (guess the
-# seconds at 0.5 power), then by *encoder*. Run each from the same start.
-# Then imagine the battery is weak: in the sim, lower the power to 0.3 and
-# repeat both. Which method still ends at 24 inches? Explain in a comment.
+# Plot it (ASCII). For a profile, print one line per time step where the
+# number of # characters is proportional to calculate(t). You should *see*
+# the S-shaped position curve rise and level off. (No libraries — just "#" *
+# int(pos / scale).)
 # ===========================================================================
 def exercise_6():
     # ---- YOUR CODE HERE ----
@@ -93,10 +96,11 @@ def exercise_6():
 
 # ===========================================================================
 # Exercise 7
-# Square dance. Make the robot trace a square: drive 24 inches, turn 90°
-# (set_drive_power(0,0,0.5) until imu.get_heading() reaches the next
-# corner), repeat 4 times. (Reuse Chapter 4's turn idea early — or just turn
-# by time for now.) Print the pose after each side.
+# Track it with a PID. Simulate a lift: a position variable starting at 0.
+# Each step dt=0.02, compute the profile target calculate(t), run a
+# PIDFController to get power, and move the position by power * step_size.
+# Show the lift follows the profile and ends near the target. (Tune kp until
+# it tracks.)
 # ===========================================================================
 def exercise_7():
     # ---- YOUR CODE HERE ----
@@ -105,10 +109,10 @@ def exercise_7():
 
 # ===========================================================================
 # Exercise 8
-# Average the encoders. A real robot reads *all four* wheel encoders and
-# averages them for a better distance estimate (one wheel can slip). Write
-# average_distance_inches(robot) that averages the four encoders and
-# converts to inches. Drive forward and print it.
+# Profile vs slam. Compare two strategies to reach 1000: (a) "slam" = full
+# power until past target then stop, (b) profile + PID. Print the position
+# trace of each near the end and describe the overshoot difference in a
+# comment.
 # ===========================================================================
 def exercise_8():
     # ---- YOUR CODE HERE ----
@@ -117,10 +121,9 @@ def exercise_8():
 
 # ===========================================================================
 # Exercise 9
-# Slow down near the target (taste of PID). Modify drive_inches so that when
-# the robot is within the last 6 inches, it uses lower power (e.g. 0.2)
-# instead of full. Does it overshoot less? This is the *intuition* behind
-# the "P" in PID you'll build later.
+# Add feedforward. Extend exercise 7: add kV * profile.velocity(t) to the
+# PID output. Show the tracking error (target − actual) is smaller with
+# feedforward than without. Explain what kV is doing.
 # ===========================================================================
 def exercise_9():
     # ---- YOUR CODE HERE ----
@@ -129,11 +132,10 @@ def exercise_9():
 
 # ===========================================================================
 # Exercise 10
-# Mission math. A game element is 30 inches forward and the robot must stop
-# 4 inches short to avoid knocking it. Using only drive_inches, write code
-# that ends with the robot 26 inches forward. Then write (comment) what
-# could still make it inaccurate on a real field (wheel slip, bumps,
-# battery) — and which sensor from later chapters fixes heading drift.
+# Lift presets, profiled. Combine with Chapter 17: write a Lift that, given
+# a Globals preset height, builds a profile from its current position to the
+# target and tracks it. Command it GROUND → HIGH → LOW and print where it
+# lands each time. This is a real, competition-grade lift.
 # ===========================================================================
 def exercise_10():
     # ---- YOUR CODE HERE ----

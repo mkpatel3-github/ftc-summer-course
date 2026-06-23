@@ -1,15 +1,15 @@
 """
-Chapter 3 — Encoders & Distance
+Chapter 17 — Robot Architecture: One Home for Hardware
 
 This is YOUR workspace. Read the matching lesson first:
-    chapters/03-encoders-and-distance.md
+    chapters/17-robot-architecture.md
 
 Then solve each exercise below where it says  # ---- YOUR CODE HERE ----.
 Run this file any time to see your output:
-    python chapters/03_starter.py
+    python chapters/17_starter.py
 
 Stuck? Try for real first, THEN peek at:
-    solutions/03_solution.py
+    solutions/17_solution.py
 """
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "sim"))
@@ -23,13 +23,14 @@ from ftcsim import (Robot, Field, Gamepad, IMU, Motor, StepperServo,
                     AsymmetricMotionProfile, Localizer, DriveEncoderLocalizer,
                     DeadWheelLocalizer, OTOSLocalizer)
 
-print("Chapter 03 - delete this line and start coding your exercises!\n")
+print("Chapter 17 - delete this line and start coding your exercises!\n")
 
 
 # ===========================================================================
 # Exercise 1
-# Read ticks. Reset front_left, drive forward 1s, print the encoder value.
-# How many inches is that (divide by 45)?
+# A singleton. Write a RobotHardware class with a get_instance() classmethod
+# that caches and returns one shared instance. Call it twice, store both,
+# and prove they are the same object (a is b is True).
 # ===========================================================================
 def exercise_1():
     # ---- YOUR CODE HERE ----
@@ -38,9 +39,10 @@ def exercise_1():
 
 # ===========================================================================
 # Exercise 2
-# Two conversion functions. Write inches_to_ticks(inches) and
-# ticks_to_inches(ticks). Test that converting 24 inches → ticks → inches
-# gives back 24.
+# Own the hardware. Give RobotHardware an __init__ that creates a sim
+# Robot() and stores it as self.robot. Add a drive(x, y, rx) method that
+# forwards to self.robot.set_drive_power(...). Drive forward 1s through the
+# singleton; print the pose.
 # ===========================================================================
 def exercise_2():
     # ---- YOUR CODE HERE ----
@@ -49,9 +51,9 @@ def exercise_2():
 
 # ===========================================================================
 # Exercise 3
-# Drive exactly 24 inches. Use the while-loop pattern to drive forward until
-# the encoder shows 24 inches, then stop. Print the final pose — x should be
-# near 24.
+# A Globals file. Make a Globals class with named constants: LIFT_GROUND=0,
+# LIFT_LOW=800, LIFT_HIGH=1600, CLAW_OPEN=0.6, CLAW_CLOSED=0.2. Print all
+# five.
 # ===========================================================================
 def exercise_3():
     # ---- YOUR CODE HERE ----
@@ -60,8 +62,10 @@ def exercise_3():
 
 # ===========================================================================
 # Exercise 4
-# A reusable drive_inches. Wrap exercise 3 into a function
-# drive_inches(robot, inches, power=0.5). Drive 12, then 36 inches with it.
+# Use the names, not the numbers. Write a function lift_preset(name) that
+# takes "GROUND", "LOW", or "HIGH" and returns the matching Globals
+# constant. Show that changing Globals.LIFT_HIGH to a new value changes the
+# result without touching lift_preset. (This is the payoff of the pattern.)
 # ===========================================================================
 def exercise_4():
     # ---- YOUR CODE HERE ----
@@ -70,9 +74,10 @@ def exercise_4():
 
 # ===========================================================================
 # Exercise 5
-# Backward by encoder. Make drive_inches handle negative distances: if
-# inches is negative, drive at negative power and loop until the encoder
-# drops below the target. Test with -12.
+# Enums in Globals. Add an ALLIANCE constant and a helper scoring_x() that
+# returns a +x target for RED and a −x target for BLUE. Flip
+# Globals.ALLIANCE and show the target mirrors — one constant changes the
+# whole robot's autonomous side.
 # ===========================================================================
 def exercise_5():
     # ---- YOUR CODE HERE ----
@@ -81,10 +86,10 @@ def exercise_5():
 
 # ===========================================================================
 # Exercise 6
-# Why time is worse (experiment). Drive 24 inches by *time* (guess the
-# seconds at 0.5 power), then by *encoder*. Run each from the same start.
-# Then imagine the battery is weak: in the sim, lower the power to 0.3 and
-# repeat both. Which method still ends at 24 inches? Explain in a comment.
+# No more copy-paste. Write two "OpModes" as functions — teleop() and
+# auton() — that both get the robot from RobotHardware.get_instance(). Show
+# they share the same hardware object (drive in one, read the pose in the
+# other).
 # ===========================================================================
 def exercise_6():
     # ---- YOUR CODE HERE ----
@@ -93,10 +98,10 @@ def exercise_6():
 
 # ===========================================================================
 # Exercise 7
-# Square dance. Make the robot trace a square: drive 24 inches, turn 90°
-# (set_drive_power(0,0,0.5) until imu.get_heading() reaches the next
-# corner), repeat 4 times. (Reuse Chapter 4's turn idea early — or just turn
-# by time for now.) Print the pose after each side.
+# Reverse once. Add a reverse_left_side() method on RobotHardware that flips
+# the left motors' reverse flag. In a comment, explain why doing this in the
+# singleton (instead of in each OpMode) prevents the classic "works in
+# TeleOp, broken in auto" bug.
 # ===========================================================================
 def exercise_7():
     # ---- YOUR CODE HERE ----
@@ -105,10 +110,10 @@ def exercise_7():
 
 # ===========================================================================
 # Exercise 8
-# Average the encoders. A real robot reads *all four* wheel encoders and
-# averages them for a better distance estimate (one wheel can slip). Write
-# average_distance_inches(robot) that averages the four encoders and
-# converts to inches. Drive forward and print it.
+# A subsystem reads from the singleton. Write a Lift class whose constructor
+# takes the RobotHardware instance and uses Globals presets in a go_to(name)
+# method. Notice the Lift never touches hardwareMap/Robot directly — it goes
+# through the singleton.
 # ===========================================================================
 def exercise_8():
     # ---- YOUR CODE HERE ----
@@ -117,10 +122,10 @@ def exercise_8():
 
 # ===========================================================================
 # Exercise 9
-# Slow down near the target (taste of PID). Modify drive_inches so that when
-# the robot is within the last 6 inches, it uses lower power (e.g. 0.2)
-# instead of full. Does it overshoot less? This is the *intuition* behind
-# the "P" in PID you'll build later.
+# Telemetry data class. Solvers keep a TelemetryData holder. Make a small
+# class that stores the robot's mode, alliance, and pose, with a
+# show(telemetry) method that prints them. Use it from your teleop()
+# function.
 # ===========================================================================
 def exercise_9():
     # ---- YOUR CODE HERE ----
@@ -129,11 +134,10 @@ def exercise_9():
 
 # ===========================================================================
 # Exercise 10
-# Mission math. A game element is 30 inches forward and the robot must stop
-# 4 inches short to avoid knocking it. Using only drive_inches, write code
-# that ends with the robot 26 inches forward. Then write (comment) what
-# could still make it inaccurate on a real field (wheel slip, bumps,
-# battery) — and which sensor from later chapters fixes heading drift.
+# Refactor a mess. Below (write it first) is a "bad" version: a function
+# that calls Robot() itself and uses bare numbers 0.6, 1600. Refactor it to
+# use RobotHardware.get_instance() and Globals. In a comment, list every
+# benefit you gained.
 # ===========================================================================
 def exercise_10():
     # ---- YOUR CODE HERE ----

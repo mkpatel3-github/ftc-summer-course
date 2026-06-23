@@ -29,6 +29,23 @@ import time
 
 
 # ---------------------------------------------------------------------------
+# Hardware I/O counter. Every real read from a motor/sensor on a robot is a
+# transaction over the hub's data bus and costs time. We count reads so the
+# loop-time chapter (Ch 18) can SHOW why "bulk reads" make a robot faster.
+# ---------------------------------------------------------------------------
+HW_READ_COUNT = 0
+
+
+def reset_hw_reads():
+    global HW_READ_COUNT
+    HW_READ_COUNT = 0
+
+
+def hw_reads():
+    return HW_READ_COUNT
+
+
+# ---------------------------------------------------------------------------
 # Telemetry: the robot's way of talking to you (like the Driver Station screen)
 # ---------------------------------------------------------------------------
 class Telemetry:
@@ -129,12 +146,13 @@ TICKS_PER_INCH = 45.0  # made-up but consistent gearing for the sim
 
 
 class Motor:
-    def __init__(self, port, name, reverse=False):
+    def __init__(self, port, name, reverse=False, hub=None):
         self.port = port
         self.name = name
         self.reverse = reverse
         self.speed = 0.0
         self._ticks = 0.0  # encoder count
+        self._hub = hub    # optional LynxModule for bulk caching (Ch 18)
 
     def set_speed(self, power):
         power = max(-1.0, min(1.0, power))  # clamp like a real motor controller
@@ -143,6 +161,18 @@ class Motor:
     setSpeed = set_speed
 
     def get_encoder_value(self):
+        global HW_READ_COUNT
+        # If a hub is caching and the cache is warm, this read is free (served
+        # from the cache). In AUTO mode the FIRST read triggers a bulk read
+        # automatically and warms the cache; in MANUAL you warm it yourself with
+        # clear_bulk_cache(). Otherwise it's a real bus transaction.
+        if self._hub is not None:
+            if self._hub.cache_warm:
+                return self._hub._cached_ticks.get(self.name, self._ticks)
+            if self._hub.mode == LynxModule.AUTO:
+                self._hub._auto_bulk()
+                return self._hub._cached_ticks.get(self.name, self._ticks)
+        HW_READ_COUNT += 1
         return self._ticks
 
     getEncoderValue = get_encoder_value
@@ -156,6 +186,53 @@ class Motor:
     def _advance(self, dt, max_in_per_s=40.0):
         distance_in = self.speed * max_in_per_s * dt
         self._ticks += distance_in * TICKS_PER_INCH
+
+
+# ---------------------------------------------------------------------------
+# LynxModule: a stand-in for the REV hub. Real hubs can read ALL their sensors
+# in one bulk transaction. In MANUAL mode you clear the cache once per loop and
+# every read until the next clear is served from that single bulk read -- the
+# loop-time optimization every top team uses (Ch 18). Mirrors
+# hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL) + clearBulkCache().
+# ---------------------------------------------------------------------------
+class LynxModule:
+    OFF = "OFF"
+    AUTO = "AUTO"
+    MANUAL = "MANUAL"
+
+    def __init__(self):
+        self.mode = LynxModule.OFF
+        self.cache_warm = False
+        self._cached_ticks = {}
+        self._motors = []
+
+    def set_bulk_caching_mode(self, mode):
+        self.mode = mode
+        self.cache_warm = False
+
+    setBulkCachingMode = set_bulk_caching_mode
+
+    def register(self, motor):
+        motor._hub = self
+        self._motors.append(motor)
+
+    def clear_bulk_cache(self):
+        global HW_READ_COUNT
+        # One bulk transaction reads EVERY motor at once -> counts as 1 read.
+        HW_READ_COUNT += 1
+        self._cached_ticks = {m.name: m._ticks for m in self._motors}
+        self.cache_warm = (self.mode == LynxModule.MANUAL)
+
+    clearBulkCache = clear_bulk_cache
+
+    def _auto_bulk(self):
+        """AUTO mode: a read with a cold cache triggers ONE bulk read and warms
+        the cache for the rest of this loop. The real SDK clears it for you each
+        loop; here a fresh clear_bulk_cache()/new loop resets cache_warm."""
+        global HW_READ_COUNT
+        HW_READ_COUNT += 1
+        self._cached_ticks = {m.name: m._ticks for m in self._motors}
+        self.cache_warm = True
 
 
 # ---------------------------------------------------------------------------
@@ -263,18 +340,26 @@ class DistanceSensor:
 # so you can feel why real teams fuse it with a camera (Chapter 14).
 # ---------------------------------------------------------------------------
 class Odometry:
-    """Mirrors a Pinpoint/OTOS: ask it for the robot's pose any time."""
+    """Mirrors a Pinpoint/OTOS: ask it for the robot's pose any time.
 
-    def __init__(self, robot, noise=0.0):
+    `noise` adds repeatable jitter to each read. `drift_per_read` slowly biases
+    the reported x/y away from truth (like wheel slip accumulating over a match)
+    so the fusion chapter (Ch 21) can show a Kalman filter cancelling it.
+    """
+
+    def __init__(self, robot, noise=0.0, drift_per_read=0.0):
         self._robot = robot
         self.noise = noise
+        self.drift_per_read = drift_per_read
         self._n = 0
+        self._drift = 0.0
 
     def get_pose(self):
         self._n += 1
+        self._drift += self.drift_per_read
         # deterministic pseudo-noise so tests are repeatable
         jitter = self.noise * math.sin(self._n * 1.3)
-        return Pose2d(self._robot.x + jitter,
+        return Pose2d(self._robot.x + jitter + self._drift,
                       self._robot.y + jitter,
                       self._robot.imu.get_heading())
 
@@ -293,10 +378,12 @@ class Odometry:
 # compute the robot's pose -- the foundation of vision localization.
 # ---------------------------------------------------------------------------
 class Camera:
-    def __init__(self, robot, field, max_range=72.0):
+    def __init__(self, robot, field, max_range=72.0, noise=0.0):
         self._robot = robot
         self._field = field
         self.max_range = max_range
+        self.noise = noise   # absolute but jumpy: unbiased, repeatable jitter
+        self._n = 0
 
     def get_detections(self):
         """Return a list of (tag, dx, dy) for every tag currently in range.
@@ -326,7 +413,12 @@ class Camera:
         if not dets:
             return None
         tag, dx, dy = min(dets, key=lambda d: math.hypot(d[1], d[2]))
-        return Pose2d(tag.x - dx, tag.y - dy, self._robot.imu.get_heading())
+        self._n += 1
+        # camera is ABSOLUTE (no drift) but jumpy: add unbiased jitter
+        nx = self.noise * math.sin(self._n * 2.1)
+        ny = self.noise * math.cos(self._n * 1.7)
+        return Pose2d(tag.x - dx + nx, tag.y - dy + ny,
+                      self._robot.imu.get_heading())
 
 
 # ---------------------------------------------------------------------------
@@ -393,6 +485,34 @@ class PIDFController:
 
 
 # ---------------------------------------------------------------------------
+# KalmanFilter: a 1-D sensor-fusion filter, ported from j5155 / Capital City
+# Dynamics' helpers/control/KalmanFilter.java. It blends a SMOOTH-but-drifting
+# estimate (odometry) with a JUMPY-but-absolute measurement (camera). Q = how
+# much you trust the model/odometry; R = how much you trust the sensor/camera.
+# You rebuild this yourself in Chapter 21; it lives here so you can check yours.
+# ---------------------------------------------------------------------------
+class KalmanFilter:
+    def __init__(self, q, r):
+        self.Q = q   # process/model noise (bigger -> trust the prediction less)
+        self.R = r   # measurement noise (bigger -> trust the sensor less)
+        self.x = 0.0  # current estimate
+        self.p = 1.0  # estimate uncertainty
+
+    def set_state(self, x):
+        self.x = x
+
+    def update(self, model_delta, measurement):
+        # predict: move the estimate by how far odometry says we moved
+        self.x += model_delta
+        self.p += self.Q
+        # correct: nudge toward the absolute measurement, weighted by the gain
+        k = self.p / (self.p + self.R)
+        self.x += k * (measurement - self.x)
+        self.p *= (1 - k)
+        return self.x
+
+
+# ---------------------------------------------------------------------------
 # Robot: the heart of the sim. Holds 4 mecanum motors and exposes
 # setDrivePower(x, y, rx) using the SAME formula as Juice Robot.java:676.
 # Calling step() advances the physics by dt seconds and moves the robot.
@@ -408,6 +528,12 @@ class Robot:
         self.front_right = Motor(1, "rightFront")
         self.back_left = Motor(2, "leftBack")
         self.back_right = Motor(3, "rightBack")
+
+        # A hub that can bulk-cache the drive motors (Ch 18). Off by default so
+        # earlier chapters' read counts behave normally.
+        self.hub = LynxModule()
+        for m in (self.front_left, self.front_right, self.back_left, self.back_right):
+            self.hub.register(m)
 
         self.imu = IMU(self)
         self.color = ColorSensor(self, self.field)
@@ -491,6 +617,121 @@ class Robot:
 
     def pose_str(self):
         return f"x={self.x:6.1f}  y={self.y:6.1f}  heading={self.imu.get_heading():6.1f}"
+
+
+# ---------------------------------------------------------------------------
+# Localizer: the swappable position-tracker interface from ACME's RoadRunner
+# quickstart (Localizer.java + ThreeDeadWheel/TwoDeadWheel/OTOS/Pinpoint impls).
+# Same contract -- get_pose()/update() -- behind many possible sensors. This is
+# the Strategy pattern: code against the interface, swap the implementation
+# (Ch 20). All our localizers just read the sim robot, but with different
+# characteristics so you feel the trade-offs.
+# ---------------------------------------------------------------------------
+class Localizer:
+    """Base contract: update() refreshes, get_pose() returns a Pose2d."""
+
+    def update(self):
+        pass
+
+    def get_pose(self):
+        raise NotImplementedError
+
+    getPose = get_pose
+
+
+class DriveEncoderLocalizer(Localizer):
+    """Cheapest: infer pose from the drive motors. Drifts on wheel slip."""
+
+    def __init__(self, robot, drift_per_read=0.02):
+        self._odo = Odometry(robot, drift_per_read=drift_per_read)
+
+    def get_pose(self):
+        return self._odo.get_pose()
+
+
+class DeadWheelLocalizer(Localizer):
+    """Unpowered odometry pods: accurate, mild drift. (Pinpoint-like.)"""
+
+    def __init__(self, robot, drift_per_read=0.002):
+        self._odo = Odometry(robot, drift_per_read=drift_per_read)
+
+    def get_pose(self):
+        return self._odo.get_pose()
+
+
+class OTOSLocalizer(Localizer):
+    """Optical sensor: easy setup, a little jumpy on bad floors."""
+
+    def __init__(self, robot, noise=0.15):
+        self._odo = Odometry(robot, noise=noise)
+
+    def get_pose(self):
+        return self._odo.get_pose()
+
+
+# ---------------------------------------------------------------------------
+# AsymmetricMotionProfile: a trapezoidal motion profile ported from KookyBotz's
+# AsymmetricMotionProfile.java. Instead of slamming a mechanism to full power,
+# you generate a smooth plan: accelerate, cruise at max velocity, decelerate to
+# stop. calculate(t) returns the target position at time t. A PID then TRACKS
+# this moving setpoint (Ch 19). Separate accel/decel limits = "asymmetric".
+# ---------------------------------------------------------------------------
+class AsymmetricMotionProfile:
+    def __init__(self, distance, max_v, accel, decel=None):
+        self.distance = float(distance)
+        self.max_v = float(max_v)
+        self.accel = float(accel)
+        self.decel = float(decel if decel is not None else accel)
+        self._build()
+
+    def _build(self):
+        d, v, a, de = self.distance, self.max_v, self.accel, self.decel
+        # time/dist to reach cruise, and to stop from cruise
+        self.t_accel = v / a
+        self.t_decel = v / de
+        d_accel = 0.5 * a * self.t_accel ** 2
+        d_decel = 0.5 * de * self.t_decel ** 2
+        if d_accel + d_decel <= d:
+            # full trapezoid: there is a cruise phase
+            self.d_cruise = d - d_accel - d_decel
+            self.t_cruise = self.d_cruise / v
+            self.peak_v = v
+        else:
+            # triangular: never reach max_v. Solve for the real peak velocity.
+            self.peak_v = math.sqrt(2 * a * de * d / (a + de))
+            self.t_accel = self.peak_v / a
+            self.t_decel = self.peak_v / de
+            self.t_cruise = 0.0
+            self.d_cruise = 0.0
+        self.total_time = self.t_accel + self.t_cruise + self.t_decel
+
+    def calculate(self, t):
+        """Target POSITION at time t (clamped to [0, distance])."""
+        if t <= 0:
+            return 0.0
+        if t >= self.total_time:
+            return self.distance
+        a, de, vp = self.accel, self.decel, self.peak_v
+        if t < self.t_accel:
+            return 0.5 * a * t * t
+        d_accel = 0.5 * a * self.t_accel ** 2
+        if t < self.t_accel + self.t_cruise:
+            return d_accel + vp * (t - self.t_accel)
+        # decel phase
+        td = t - self.t_accel - self.t_cruise
+        d_cruise = vp * self.t_cruise
+        return d_accel + d_cruise + (vp * td - 0.5 * de * td * td)
+
+    def velocity(self, t):
+        """Target VELOCITY at time t (for feedforward)."""
+        if t <= 0 or t >= self.total_time:
+            return 0.0
+        if t < self.t_accel:
+            return self.accel * t
+        if t < self.t_accel + self.t_cruise:
+            return self.peak_v
+        td = t - self.t_accel - self.t_cruise
+        return self.peak_v - self.decel * td
 
 
 # ---------------------------------------------------------------------------
@@ -703,3 +944,14 @@ if __name__ == "__main__":
     )
     run_action(r2, act)
     print("After action sequence:", r2.pose_str())
+
+    # self-test for the Ch 17-22 primitives
+    prof = AsymmetricMotionProfile(distance=100, max_v=50, accel=80, decel=40)
+    print(f"Motion profile: total_time={prof.total_time:.2f}s "
+          f"end={prof.calculate(prof.total_time):.1f} mid_v={prof.velocity(prof.total_time/2):.1f}")
+    kf = KalmanFilter(q=0.1, r=2.0)
+    kf.set_state(0.0)
+    fused = kf.update(model_delta=5.0, measurement=4.0)
+    print(f"Kalman fuse(predict+5, meas 4) -> {fused:.2f}")
+    loc = DeadWheelLocalizer(Robot())
+    print("DeadWheelLocalizer pose:", loc.get_pose())
