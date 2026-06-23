@@ -1,0 +1,17 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Cloned reference repos are NOT part of this course -- we link to them in
+# REFERENCES.md instead. If you clone them locally to read along, keep them out.
+/IntoTheDeep/
+/CenterStageV2/
+/LearnJavaForFTC/
+/PowerPlay/
+/FtcRobotController/
+
+# Editor / OS junk
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
