@@ -106,13 +106,13 @@ only you** — the season is the real test.
 
 ## The plan for the summer 📅
 
-- There are **22 chapters**, each with **10 exercises** = **220 little challenges**.
+- There are **25 chapters**, each with **10 exercises** = **250 little challenges**.
   Chapters 1–10 are the core skills; 11–16 are the "modern robot" upgrades (turning your
-  Python into real Java, plus what the best teams do today); 17–22 are the
+  Python into real Java, plus what the best teams do today); 17–25 are the
   "pro-architecture" chapters that take apart the actual codebases of the top FTC teams.
 - Do about **one exercise per weekday**. That's a whole summer, and you'll finish right
   around when the new FTC season starts. If you only get through Chapter 11, you're
-  already ready — Chapters 12–16 make you *competitive*, and 17–22 teach you to write
+  already ready — Chapters 12–16 make you *competitive*, and 17–25 teach you to write
   code the way top teams actually structure a whole robot.
 - Some days an exercise is a 5-minute warm-up; some are a real puzzle. That's normal.
 - The exercises in each chapter go easy → harder. Exercises **1–2** are warm-ups,

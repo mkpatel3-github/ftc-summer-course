@@ -33,9 +33,9 @@ instead of copying them in — open them on GitHub to read the originals.
 > git clone https://github.com/Juice-Robotics/IntoTheDeep.git
 > ```
 
-## Top-team codebases — the pro-architecture chapters (17–22)
+## Top-team codebases — the pro-architecture chapters (17–25)
 
-Chapters 17–22 teach patterns lifted straight from the public code of four widely studied
+Chapters 17–25 teach patterns lifted straight from the public code of four widely studied
 teams. Clone any of these to read the real Java the lessons point at:
 
 - **ACME Robotics (#8367) — RoadRunner quickstart:**
@@ -51,11 +51,19 @@ teams. Clone any of these to read the real Java the lessons point at:
 - **Capital City Dynamics / j5155 (#12087) — 2024:** https://github.com/jdhs-ftc/2024
   - `.../helpers/control/KalmanFilter.java` — the 1-D Kalman filter you rebuild (Chapter 21)
   - `.../AprilTagDrive.java` + OTOS instructions — odometry predict / AprilTag correct
+  - `.../PosePatcher.java` (timestamped pose `TreeMap`) + `AprilTagDrive.updatePoseEstimate()`
+    — back-date a late detection and roll it forward; latency-compensated relocalization
+    (Chapter 23)
 - **KookyBotz (#16379) — CenterStage:** https://github.com/KookyBotz/CenterStage
   - `.../opmode/teleop/Duo.java` — the `clearBulkCache(); read(); periodic(); write();`
     loop structure (Chapter 18)
   - `.../utils/AsymmetricMotionProfile.java`, `WActuatorGroup.java` — hand-written
     asymmetric profile + PID + feedforward (Chapter 19)
+  - `.../commands/ClawToggleCommand.java` (nested `ConditionalCommand`) + `Solo.java` button
+    bindings (`gamepadEx.getGamepadButton(...).whenPressed(...)`) — advanced command-based
+    (Chapter 24)
+  - `.../utils/GVFPathFollower.java` — guided-vector-field path following; the "pro" version
+    of the pure pursuit you build (Chapter 25)
 
 ## Books & guides
 

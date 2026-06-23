@@ -1,15 +1,15 @@
 """
-Chapter 14 — Vision & AprilTags
+Chapter 24 — Advanced Command-Based: Bindings, Requirements & Conditionals
 
 This is YOUR workspace. Read the matching lesson first:
-    chapters/14-vision-and-apriltags.md
+    chapters/24-advanced-command-based.md
 
 Then solve each exercise below where it says  # ---- YOUR CODE HERE ----.
 Run this file any time to see your output:
-    python chapters/14_starter.py
+    python chapters/24_starter.py
 
 Stuck? Try for real first, THEN peek at:
-    solutions/14_solution.py
+    solutions/24_solution.py
 """
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), "..", "sim"))
@@ -25,14 +25,16 @@ from ftcsim import (Robot, Field, Gamepad, IMU, Motor, StepperServo,
                     PoseHistory, ConditionalCommand, Subsystem, Button,
                     RunningCommandScheduler, Path, PurePursuitFollower)
 
-print("Chapter 14 - delete this line and start coding your exercises!\n")
+print("Chapter 24 - delete this line and start coding your exercises!\n")
 
 
 # ===========================================================================
 # Exercise 1
-# See a tag. Put the robot near the right wall (start_x=60, start_y=0) and
-# print robot.camera.get_detections(). Confirm at least one tag is visible
-# and print its id.
+# Bind a button. Make a RunningCommandScheduler and a Button reading a flag
+# you control. Bind it (when_pressed) to an InstantCommand that prints
+# "FIRE". Flip the flag True and call sched.run(); show it fires. Set it
+# back False, run again; show it does not re-fire. (Edge detection, for
+# free.)
 # ===========================================================================
 def exercise_1():
     # ---- YOUR CODE HERE ----
@@ -41,9 +43,10 @@ def exercise_1():
 
 # ===========================================================================
 # Exercise 2
-# Localize. From the same spot, print robot.camera.localize(). Compare it to
-# the robot's true pose (robot.get_pose()). They should match (perfect sim
-# camera).
+# Only on the rising edge. Keep the flag True for 5 consecutive run() calls.
+# Count how many times the command fires. Show it's exactly once — held
+# buttons don't repeat. In a comment, contrast with polling the flag
+# directly in a loop.
 # ===========================================================================
 def exercise_2():
     # ---- YOUR CODE HERE ----
@@ -52,10 +55,9 @@ def exercise_2():
 
 # ===========================================================================
 # Exercise 3
-# Out of range. Put the robot at the center (0,0) with the camera's
-# max_range small: robot.camera.max_range = 10. Show localize() returns
-# None. Explain in a comment what your code should do when the camera sees
-# nothing.
+# Two buttons, two commands. Bind button A to "open" and button B to "close"
+# (each an InstantCommand printing its name). Press A, then B, then A. Show
+# the prints follow your presses. No was_pressed variables in your loop.
 # ===========================================================================
 def exercise_3():
     # ---- YOUR CODE HERE ----
@@ -64,9 +66,11 @@ def exercise_3():
 
 # ===========================================================================
 # Exercise 4
-# Localize from the math yourself. Don't call localize(). Get one detection
-# (tag, dx, dy) from get_detections() and compute robot_x = tag.x - dx,
-# robot_y = tag.y - dy by hand. Confirm it matches the true pose.
+# A subsystem requirement. Make a Subsystem claw. Build two commands that
+# both .requires(claw) but take several loops to finish (subclass Command,
+# finish after N updates). Schedule the first, tick once, then schedule the
+# second. Show the first is no longer scheduled (sched.is_scheduled) — the
+# second cancelled it.
 # ===========================================================================
 def exercise_4():
     # ---- YOUR CODE HERE ----
@@ -75,10 +79,10 @@ def exercise_4():
 
 # ===========================================================================
 # Exercise 5
-# Nearest tag wins. Place the robot where two tags are in range (try
-# start_x=50, start_y=50 with a large max_range). Print all detections and
-# their distances, then show localize() picked the closest one. Why prefer
-# the closest? (Comment.)
+# No shared requirement, no cancel. Repeat exercise 4 but give the two
+# commands different subsystems (claw and lift). Schedule both. Show both
+# stay scheduled and run at the same time. In a comment: this is why
+# requirements are per-subsystem, not global.
 # ===========================================================================
 def exercise_5():
     # ---- YOUR CODE HERE ----
@@ -87,9 +91,10 @@ def exercise_5():
 
 # ===========================================================================
 # Exercise 6
-# Camera vs odometry. Drive forward 2s. Print both robot.odometry.get_pose()
-# and robot.camera.localize(). With a perfect sim they agree — in a comment,
-# say which one you trust more after a 30-second match, and why (drift!).
+# ConditionalCommand basics. Make a claw_closed flag. Build a
+# ConditionalCommand that runs "OPEN" when closed and "CLOSE" when open. Run
+# it with the flag True, then False; show it picks the right branch each
+# time based on the condition at init.
 # ===========================================================================
 def exercise_6():
     # ---- YOUR CODE HERE ----
@@ -98,11 +103,10 @@ def exercise_6():
 
 # ===========================================================================
 # Exercise 7
-# Find the sample by color. Reuse Chapter 5: place a colored sample on the
-# field (field.sample_x, field.sample_y, field.sample_color), drive over it,
-# and use the color sensor to report its color. In a comment, note that
-# CVMaster.java does this with a camera blob detector instead of a contact
-# sensor — what's the advantage of seeing it from far away?
+# A real toggle. Wire exercise 6 to a button so one button alternates
+# open/close. Have each branch also flip the claw_closed flag. Press the
+# button three times; show it goes closed→open→closed→open. This is a
+# one-button toggle, the command-based way.
 # ===========================================================================
 def exercise_7():
     # ---- YOUR CODE HERE ----
@@ -111,10 +115,11 @@ def exercise_7():
 
 # ===========================================================================
 # Exercise 8
-# Re-localize after a "bump." Drive forward 2s, then *teleport* the robot
-# (simulate a defender shoving it: set robot.x += 8). Show odometry still
-# reports the old-ish path but camera.localize() immediately reports the
-# true, bumped position. This is the headline benefit of vision.
+# Nested conditional (3-state). Mimic KookyBotz's ClawToggleCommand: a state
+# variable that is "CLOSED", "OPEN", or "INTERMEDIATE", and a nested
+# ConditionalCommand so one button cycles closed→intermediate→open→… Print
+# the state after each press. In a comment, match it to the Java bridge
+# above.
 # ===========================================================================
 def exercise_8():
     # ---- YOUR CODE HERE ----
@@ -123,9 +128,11 @@ def exercise_8():
 
 # ===========================================================================
 # Exercise 9
-# A vision-corrected stop. Drive toward the right wall. Each loop, if a tag
-# is visible, use camera.localize() to check distance to Pose2d(60, 0); stop
-# within 2". Print the final pose. (Vision closing the loop on position.)
+# Requirement during a sequence. Schedule a SequentialCommand (several
+# steps, requires lift) and let it run a couple loops. Mid-sequence,
+# schedule a different command that also requires lift. Show the sequence is
+# cancelled and the new command takes over. Explain why this is the
+# *correct* behavior for a driver who changes their mind mid-action.
 # ===========================================================================
 def exercise_9():
     # ---- YOUR CODE HERE ----
@@ -134,11 +141,12 @@ def exercise_9():
 
 # ===========================================================================
 # Exercise 10
-# Design a vision plan. In a comment block, write the plan Juice's CVMaster
-# follows at a high level: when to run the AprilTag pipeline (localization)
-# vs the color-blob pipeline (find sample), and why you wouldn't run heavy
-# vision every single loop (hint: loop time — Chapter 15). No code; this is
-# real strategy.
+# A tiny TeleOp. Put it together: a scheduler, two subsystems (drive, claw),
+# a couple of buttons bound to commands, and a 30-loop "match" where you
+# script some button presses by flipping flags on certain loops. Print what
+# runs each loop. In a comment, map your loop body to KookyBotz's
+# CommandScheduler.getInstance().run() and explain what you'd no longer have
+# to hand-write compared to a Chapter 6 polling loop.
 # ===========================================================================
 def exercise_10():
     # ---- YOUR CODE HERE ----

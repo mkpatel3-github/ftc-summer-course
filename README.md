@@ -64,13 +64,14 @@ And the modern skills today's top teams (and Juice) actually run:
 > **Students: read [`STUDENT-START-HERE.md`](STUDENT-START-HERE.md) first** — it walks you
 > through installing Python and running your first exercise, step by step.
 
-- **22 chapters, 10 exercises each = 220 exercises.** Do ~1 exercise per weekday.
-  That's about 18 weeks of weekdays — a full summer, finishing before kickoff.
+- **25 chapters, 10 exercises each = 250 exercises.** Do ~1 exercise per weekday.
+  That's about 20 weeks of weekdays — a full summer, finishing before kickoff.
   Chapters 1–10 are the core; **11–16 are the modern upgrades** (Java conversion,
   field-centric driving, odometry, vision/AprilTags, command-based code, pose-based
-  autonomous); **17–22 are the pro-architecture chapters** (hardware singleton,
+  autonomous); **17–25 are the pro-architecture chapters** (hardware singleton,
   loop-time/bulk reads, motion profiling, swappable localizers, Kalman sensor fusion,
-  and the live tuning workflow) drawn from the codebases of the top teams below.
+  the live tuning workflow, AprilTag relocalization, advanced command-based, and path
+  following) drawn from the codebases of the top teams below.
 - Each chapter has: a **lesson** (`chapters/NN-name.md`), a **starter file you edit**
   (`chapters/NN_starter.py`), and an **answer key** (`solutions/NN_solution.py`).
   The starter files are generated from the lessons by `tools/make_starters.py`.
@@ -121,6 +122,9 @@ python chapters/02_starter.py
 | 20 | [Swappable Localizers](chapters/20-swappable-localizers.md) | Strategy pattern behind a `Localizer` interface | ACME `Localizer.java` |
 | 21 | [Sensor Fusion & Kalman](chapters/21-sensor-fusion-kalman.md) | Fuse drifting odometry + jumpy camera | j5155 `KalmanFilter.java` |
 | 22 | [The Tuning Workflow](chapters/22-tuning-workflow.md) | `@Config` + FTC Dashboard + a tuning method | ACME tuning OpModes |
+| 23 | [AprilTag Relocalization & Latency](chapters/23-apriltag-relocalization.md) | Back-date a late camera fix; reset pose mid-match | j5155 `PosePatcher.java`/`AprilTagDrive.java` |
+| 24 | [Advanced Command-Based](chapters/24-advanced-command-based.md) | Button bindings, subsystem requirements, `ConditionalCommand` | KookyBotz `ClawToggleCommand.java` |
+| 25 | [Path Following: Pure Pursuit](chapters/25-path-following.md) | Follow a whole path with a lookahead point | KookyBotz `GVFPathFollower.java` |
 
 ## A note to mentors / parents
 
@@ -159,9 +163,12 @@ theirs.** Full thanks and credit to:
 - **Seattle Solvers (#23511)** — the hardware-singleton + `Globals` architecture pattern and
   SolversLib (Ch 17). https://github.com/FTC-23511
 - **Capital City Dynamics / j5155 (#12087)** — the 1-D `KalmanFilter` and AprilTag-fused
-  drive that inspired the sensor-fusion chapter (Ch 21). https://github.com/jdhs-ftc
-- **KookyBotz (#16379)** — the clean loop structure (read→periodic→write, bulk caching) and
-  the asymmetric motion profile (Ch 18, 19). https://github.com/KookyBotz
+  drive that inspired the sensor-fusion chapter (Ch 21), plus the `PosePatcher`/`AprilTagDrive`
+  latency-compensated relocalization (Ch 23). https://github.com/jdhs-ftc
+- **KookyBotz (#16379)** — the clean loop structure (read→periodic→write, bulk caching), the
+  asymmetric motion profile (Ch 18, 19), the nested `ConditionalCommand` claw toggle (Ch 24),
+  and the `GVFPathFollower` that inspired the path-following chapter (Ch 25).
+  https://github.com/KookyBotz
 - **FIRST® Tech Challenge** — the official FTC SDK and sample OpModes.
   https://github.com/FIRST-Tech-Challenge/FtcRobotController
 

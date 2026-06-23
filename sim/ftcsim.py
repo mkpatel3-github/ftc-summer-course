@@ -378,11 +378,15 @@ class Odometry:
 # compute the robot's pose -- the foundation of vision localization.
 # ---------------------------------------------------------------------------
 class Camera:
-    def __init__(self, robot, field, max_range=72.0, noise=0.0):
+    def __init__(self, robot, field, max_range=72.0, noise=0.0, latency=0.0):
         self._robot = robot
         self._field = field
         self.max_range = max_range
         self.noise = noise   # absolute but jumpy: unbiased, repeatable jitter
+        # latency: a real camera + detector takes time. The pose a frame gives
+        # you describes where the robot WAS when the shutter opened, but you only
+        # get the answer `latency` seconds later. Ch 23 compensates for this.
+        self.latency = latency
         self._n = 0
 
     def get_detections(self):
@@ -419,6 +423,31 @@ class Camera:
         ny = self.noise * math.cos(self._n * 1.7)
         return Pose2d(tag.x - dx + nx, tag.y - dy + ny,
                       self._robot.imu.get_heading())
+
+    def localize_with_timestamp(self):
+        """Like localize(), but returns (pose, capture_time) or None.
+
+        The key to latency: the pose describes where the robot WAS at
+        capture_time (`latency` seconds ago), because that's when the shutter
+        opened -- but you only get the answer now. So a fix taken while moving is
+        already STALE the instant you read it. j5155's AprilTagDrive reads
+        capture_time from the SDK's `frameAcquisitionNanoTime`. Pair it with a
+        PoseHistory to back-date the fix to that instant and roll it forward to
+        the current pose (Ch 23).
+        """
+        capture_time = self._robot.clock - self.latency
+        # what the camera saw is the robot's TRUE pose back when the frame opened
+        _, px, py, ph = self._robot.true_pose_at(capture_time)
+        # is any tag in range of that past position?
+        in_range = [t for t in self._field.april_tags
+                    if math.hypot(t.x - px, t.y - py) <= self.max_range]
+        if not in_range:
+            return None
+        tag = min(in_range, key=lambda t: math.hypot(t.x - px, t.y - py))
+        self._n += 1
+        nx = self.noise * math.sin(self._n * 2.1)
+        ny = self.noise * math.cos(self._n * 1.7)
+        return Pose2d(px + nx, py + ny, ph), capture_time
 
 
 # ---------------------------------------------------------------------------
@@ -513,6 +542,61 @@ class KalmanFilter:
 
 
 # ---------------------------------------------------------------------------
+# PoseHistory: a timestamped buffer of past poses, ported in spirit from j5155 /
+# Capital City Dynamics' PosePatcher.java. A camera fix arrives LATE -- it
+# describes where the robot was when the shutter opened, not now. PoseHistory
+# lets you look up "where did odometry think I was at time T?", measure the
+# correction the camera implies at that instant, and re-apply the odometry you
+# have driven SINCE then so the correction lands on your CURRENT pose. This is
+# latency compensation, the secret to clean AprilTag relocalization (Ch 23).
+# ---------------------------------------------------------------------------
+class PoseHistory:
+    def __init__(self, timeout=1.0):
+        self.timeout = timeout      # seconds of history to keep
+        self._entries = []          # list of (time, Pose2d), oldest first
+
+    def add(self, time, pose):
+        self._entries.append((time, pose))
+        self.remove_old(time)
+
+    def remove_old(self, now):
+        cutoff = now - self.timeout
+        self._entries = [(t, p) for (t, p) in self._entries if t >= cutoff]
+
+    def pose_at(self, time):
+        """The stored pose at-or-just-before `time`, or None if too old."""
+        best = None
+        for t, p in self._entries:
+            if t <= time:
+                best = p
+            else:
+                break
+        return best
+
+    def latest(self):
+        return self._entries[-1][1] if self._entries else None
+
+    def patch(self, measured_pose, capture_time):
+        """Back-date a late camera fix and roll it forward to NOW.
+
+        We saw `measured_pose` for the frame taken at `capture_time`. Compare it
+        to where odometry thought we were THEN to get the correction (offset),
+        then add the odometry motion driven since to land on the current pose.
+        Returns the corrected current pose, or None if the frame is too old.
+        """
+        old = self.pose_at(capture_time)
+        now = self.latest()
+        if old is None or now is None:
+            return None
+        # how far odometry has moved since the frame was captured
+        moved_x = now.x - old.x
+        moved_y = now.y - old.y
+        return Pose2d(measured_pose.x + moved_x,
+                      measured_pose.y + moved_y,
+                      now.heading)
+
+
+# ---------------------------------------------------------------------------
 # Robot: the heart of the sim. Holds 4 mecanum motors and exposes
 # setDrivePower(x, y, rx) using the SAME formula as Juice Robot.java:676.
 # Calling step() advances the physics by dt seconds and moves the robot.
@@ -541,6 +625,14 @@ class Robot:
         self.odometry = Odometry(self)
         self.camera = Camera(self, self.field)
         self.telemetry = Telemetry()
+
+        # A simulated clock (seconds). step() advances it. The camera stamps each
+        # detection with the time it was "captured" so the relocalization chapter
+        # (Ch 23) can back-date a laggy detection to when the frame was taken.
+        self.clock = 0.0
+        # A log of the robot's TRUE pose over time, so a laggy camera can report
+        # where the robot really WAS when the shutter opened (Ch 23), not now.
+        self._pose_log = [(0.0, self.x, self.y, self.heading)]
 
         self._fl = self._fr = self._bl = self._br = 0.0
 
@@ -591,6 +683,7 @@ class Robot:
 
     def step(self, dt=0.02):
         """Advance the simulation by dt seconds. Call this inside your loop."""
+        self.clock += dt
         # Translate the 4 wheel powers into robot-frame motion (forward, strafe, turn)
         forward = (self._fl + self._fr - self._bl - self._br) / 4.0
         strafe = (self._fl - self._fr + self._bl - self._br) / 4.0
@@ -614,6 +707,24 @@ class Robot:
         # keep the robot on the field
         self.x = max(-FIELD_HALF, min(FIELD_HALF, self.x))
         self.y = max(-FIELD_HALF, min(FIELD_HALF, self.y))
+
+        # remember where we truly were, so a laggy camera (Ch 23) can report the
+        # past pose rather than the present one. Keep ~2s of history.
+        self._pose_log.append((self.clock, self.x, self.y, self.heading))
+        cutoff = self.clock - 2.0
+        if self._pose_log[0][0] < cutoff:
+            self._pose_log = [e for e in self._pose_log if e[0] >= cutoff]
+
+    def true_pose_at(self, t):
+        """The robot's TRUE pose at time t (nearest logged entry at-or-before t).
+        Used by the camera to model latency -- not part of the real robot API."""
+        best = self._pose_log[0]
+        for e in self._pose_log:
+            if e[0] <= t:
+                best = e
+            else:
+                break
+        return best  # (time, x, y, heading)
 
     def pose_str(self):
         return f"x={self.x:6.1f}  y={self.y:6.1f}  heading={self.imu.get_heading():6.1f}"
@@ -742,7 +853,19 @@ class AsymmetricMotionProfile:
 # behavior instead of writing one giant while-loop.
 # ---------------------------------------------------------------------------
 class Command:
-    """Base class. Override init()/update(); update() returns True when done."""
+    """Base class. Override init()/update(); update() returns True when done.
+
+    `requirements` is the set of subsystems this command needs exclusive use of.
+    A requirements-aware scheduler (Ch 24) uses it to stop two commands fighting
+    over the same mechanism: scheduling a new command cancels any running command
+    that shares a requirement. Mirrors FTCLib's `addRequirements(...)`.
+    """
+
+    requirements = ()
+
+    def requires(self, *subsystems):
+        self.requirements = tuple(subsystems)
+        return self
 
     def init(self):
         pass
@@ -819,6 +942,108 @@ class ParallelCommand(Command):
                 c.end()
                 self._done[idx] = True
         return all(self._done)
+
+
+class ConditionalCommand(Command):
+    """Picks ONE of two commands at init() based on a condition function.
+    Mirrors FTCLib's ConditionalCommand and KookyBotz's ClawToggleCommand,
+    which nests these to make a 3-state toggle (open/closed/intermediate)."""
+
+    def __init__(self, on_true, on_false, condition):
+        self.on_true = on_true
+        self.on_false = on_false
+        self.condition = condition
+        self._chosen = None
+
+    def init(self):
+        self._chosen = self.on_true if self.condition() else self.on_false
+        self._chosen.init()
+
+    def update(self):
+        return self._chosen.update()
+
+    def end(self):
+        self._chosen.end()
+
+
+# ---------------------------------------------------------------------------
+# Subsystem + Button: the two pieces a real command-based robot needs beyond raw
+# commands. A Subsystem is a thing a command can "require" (the claw, the lift);
+# the scheduler guarantees only one command drives it at a time. A Button maps a
+# gamepad input edge to a command, mirroring FTCLib's GamepadEx + .whenPressed().
+# (KookyBotz: gamepadEx.getGamepadButton(RIGHT_BUMPER).whenPressed(cmd)).
+# ---------------------------------------------------------------------------
+class Subsystem:
+    """A hardware group a command can require. Override periodic() if you like."""
+
+    def periodic(self):
+        pass
+
+
+class Button:
+    """Edge-detects one boolean input and fires a command on the rising edge.
+    Register it with a RunningCommandScheduler so the command actually runs."""
+
+    def __init__(self, read_fn):
+        self._read = read_fn
+        self._last = False
+        self._on_pressed = None
+        self._scheduler = None
+
+    def when_pressed(self, command):
+        self._on_pressed = command
+        return self
+
+    whenPressed = when_pressed
+
+    def _poll(self):
+        now = bool(self._read())
+        fired = None
+        if now and not self._last:        # rising edge
+            fired = self._on_pressed
+        self._last = now
+        return fired
+
+
+class RunningCommandScheduler:
+    """A persistent scheduler you tick every loop (unlike CommandScheduler,
+    which drives ONE command to completion). It runs many commands at once,
+    polls buttons, and -- the key feature -- enforces subsystem requirements:
+    scheduling a command cancels any running command that shares a requirement.
+    Mirrors FTCLib's CommandScheduler.getInstance().run()."""
+
+    def __init__(self):
+        self._running = []     # list of Command currently active
+        self._buttons = []
+
+    def register_button(self, button):
+        button._scheduler = self
+        self._buttons.append(button)
+        return button
+
+    def schedule(self, command):
+        # cancel any running command that needs a subsystem this one needs
+        if command.requirements:
+            for other in list(self._running):
+                if set(other.requirements) & set(command.requirements):
+                    other.end()
+                    self._running.remove(other)
+        command.init()
+        self._running.append(command)
+
+    def run(self):
+        for b in self._buttons:
+            cmd = b._poll()
+            if cmd is not None:
+                self.schedule(cmd)
+        for cmd in list(self._running):
+            if cmd.update():
+                cmd.end()
+                if cmd in self._running:
+                    self._running.remove(cmd)
+
+    def is_scheduled(self, command):
+        return command in self._running
 
 
 class CommandScheduler:
@@ -909,6 +1134,93 @@ def run_action(robot, action, dt=0.02, max_seconds=30.0):
 
 
 # ---------------------------------------------------------------------------
+# Path + PurePursuitFollower: how a robot follows a smooth path instead of
+# stopping at each waypoint. A Path is a list of (x, y) points. Pure pursuit
+# (the accessible cousin of KookyBotz's GVFPathFollower) works like a human
+# driver: find the point on the path one "lookahead" distance ahead, and steer
+# toward it. As the robot moves, that target slides along the path, carving a
+# smooth curve. GVF does the same job with a vector field; the IDEA is identical:
+# project onto the path, then steer along it. You build this in Chapter 25.
+# ---------------------------------------------------------------------------
+class Path:
+    """An ordered list of (x, y) waypoints, with helpers to measure against it.
+
+    Pure pursuit needs the path sampled finely (so the "closest point" tracks
+    the robot smoothly and the lookahead point is always ahead). We keep your
+    `waypoints` as given and build a densely-resampled `points` list (one point
+    roughly every `spacing` inches) that the follower actually drives along."""
+
+    def __init__(self, points, spacing=1.0):
+        self.waypoints = [(float(x), float(y)) for x, y in points]
+        self.points = self._resample(self.waypoints, spacing)
+
+    @staticmethod
+    def _resample(waypoints, spacing):
+        if len(waypoints) < 2:
+            return list(waypoints)
+        out = [waypoints[0]]
+        for (x0, y0), (x1, y1) in zip(waypoints, waypoints[1:]):
+            seg = math.hypot(x1 - x0, y1 - y0)
+            n = max(1, int(seg / spacing))
+            for k in range(1, n + 1):
+                f = k / n
+                out.append((x0 + (x1 - x0) * f, y0 + (y1 - y0) * f))
+        return out
+
+    def end(self):
+        return self.points[-1]
+
+    def closest_point(self, x, y):
+        """The waypoint nearest (x, y) and its index -- the robot's projection."""
+        best_i, best_d = 0, float("inf")
+        for i, (px, py) in enumerate(self.points):
+            d = math.hypot(px - x, py - y)
+            if d < best_d:
+                best_d, best_i = d, i
+        return best_i, best_d
+
+    def lookahead_point(self, x, y, lookahead):
+        """Walk FORWARD from the robot's projection to the first waypoint at
+        least `lookahead` inches away. That's the carrot the robot chases. Near
+        the end of the path, fall back to the final point."""
+        start_i, _ = self.closest_point(x, y)
+        for i in range(start_i, len(self.points)):
+            px, py = self.points[i]
+            if math.hypot(px - x, py - y) >= lookahead:
+                return self.points[i]
+        return self.end()
+
+
+class PurePursuitFollower:
+    """Steers the robot along a Path by always driving toward a lookahead point.
+    Done when the robot is within `tol` of the path's end. Same role as a
+    RoadRunner trajectory follower or KookyBotz's GVF follower, taught simply."""
+
+    def __init__(self, robot, path, lookahead=8.0, kp=0.08, tol=2.0):
+        self.robot = robot
+        self.path = path
+        self.lookahead = lookahead
+        self.kp = kp
+        self.tol = tol
+
+    def run(self):
+        r = self.robot
+        ex, ey = self.path.end()
+        if math.hypot(ex - r.x, ey - r.y) <= self.tol:
+            r.set_drive_power(0, 0, 0)
+            return False  # arrived
+        tx, ty = self.path.lookahead_point(r.x, r.y, self.lookahead)
+        dx, dy = tx - r.x, ty - r.y
+        # same field->robot stick mapping as DriveToPoseAction
+        h = math.radians(r.imu.get_heading())
+        forward = dx * math.cos(h) + dy * math.sin(h)   # -> y stick
+        strafe = -dx * math.sin(h) + dy * math.cos(h)   # -> x stick
+        clamp = lambda v: max(-1.0, min(1.0, v))
+        r.set_drive_power(clamp(strafe * self.kp), clamp(forward * self.kp), 0)
+        return True  # keep going
+
+
+# ---------------------------------------------------------------------------
 # A tiny helper so exercises can "run a TeleOp" for a fixed time without a robot.
 # ---------------------------------------------------------------------------
 def run_for(robot, seconds, loop_fn, dt=0.02, realtime=False):
@@ -955,3 +1267,21 @@ if __name__ == "__main__":
     print(f"Kalman fuse(predict+5, meas 4) -> {fused:.2f}")
     loc = DeadWheelLocalizer(Robot())
     print("DeadWheelLocalizer pose:", loc.get_pose())
+
+    # self-test for the Ch 23-25 primitives
+    hist = PoseHistory(timeout=1.0)
+    hist.add(0.0, Pose2d(0, 0, 0))
+    hist.add(0.1, Pose2d(5, 0, 0))     # odometry moved +5 since the frame
+    patched = hist.patch(Pose2d(1, 0, 0), capture_time=0.0)  # camera saw x=1 then
+    print(f"PosePatch: late fix x=1 @t=0 rolled forward -> x={patched.x:.1f}")
+    claw = Subsystem()
+    sched = RunningCommandScheduler()
+    a = InstantCommand(lambda: None).requires(claw)
+    b = InstantCommand(lambda: None).requires(claw)
+    sched.schedule(a)
+    sched.schedule(b)              # shares claw -> should cancel a
+    print(f"Requirements: a scheduled? {sched.is_scheduled(a)} (expect False)")
+    r3 = Robot()
+    path = Path([(0, 0), (10, 0), (20, 0), (20, 10), (20, 20)])
+    run_action(r3, PurePursuitFollower(r3, path), max_seconds=10.0)
+    print(f"Pure pursuit end: {r3.pose_str()} (target ~20,20)")

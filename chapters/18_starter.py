@@ -21,7 +21,9 @@ from ftcsim import (Robot, Field, Gamepad, IMU, Motor, StepperServo,
                     SequentialAction, run_action,
                     LynxModule, reset_hw_reads, hw_reads, KalmanFilter,
                     AsymmetricMotionProfile, Localizer, DriveEncoderLocalizer,
-                    DeadWheelLocalizer, OTOSLocalizer)
+                    DeadWheelLocalizer, OTOSLocalizer,
+                    PoseHistory, ConditionalCommand, Subsystem, Button,
+                    RunningCommandScheduler, Path, PurePursuitFollower)
 
 print("Chapter 18 - delete this line and start coding your exercises!\n")
 
